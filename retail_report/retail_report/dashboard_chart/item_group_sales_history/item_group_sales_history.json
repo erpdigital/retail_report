@@ -1,0 +1,32 @@
+{
+ "chart_name": "Item-Group sales history",
+ "chart_type": "Report",
+ "creation": "2023-01-14 19:03:33.383473",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart",
+ "dynamic_filters_json": "{}",
+ "filters_json": "{\"warehouse\":\"\",\"from_date\":\"2022-01-01\",\"to_date\":\"2022-12-31\"}",
+ "group_by_type": "Count",
+ "idx": 0,
+ "is_public": 0,
+ "is_standard": 1,
+ "modified": "2023-01-14 21:42:15.133214",
+ "modified_by": "Administrator",
+ "module": "Retail Report",
+ "name": "Item-Group sales history",
+ "number_of_groups": 0,
+ "owner": "Administrator",
+ "report_name": "Item-wise Sales History2",
+ "roles": [],
+ "time_interval": "Yearly",
+ "timeseries": 0,
+ "timespan": "Last Year",
+ "type": "Pie",
+ "use_report_chart": 0,
+ "x_field": "item_name",
+ "y_axis": [
+  {
+   "y_field": "in_qty"
+  }
+ ]
+}

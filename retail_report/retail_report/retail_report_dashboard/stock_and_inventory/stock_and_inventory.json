@@ -1,0 +1,39 @@
+{
+ "cards": [
+  {
+   "card": "Total Active Items"
+  },
+  {
+   "card": "Total Stock Value"
+  },
+  {
+   "card": "Total Warehouses"
+  }
+ ],
+ "charts": [
+  {
+   "chart": "Items Percentage in Stock",
+   "width": "Full"
+  },
+  {
+   "chart": "Stock Ageing By Days",
+   "width": "Half"
+  },
+  {
+   "chart": "Warehouse-wise Stock Value",
+   "width": "Half"
+  }
+ ],
+ "creation": "2023-01-14 19:17:33.245132",
+ "dashboard_name": "Stock and Inventory",
+ "docstatus": 0,
+ "doctype": "Dashboard",
+ "idx": 0,
+ "is_default": 0,
+ "is_standard": 1,
+ "modified": "2023-01-14 22:07:11.226364",
+ "modified_by": "Administrator",
+ "module": "Retail Report",
+ "name": "Stock and Inventory",
+ "owner": "Administrator"
+}

@@ -1,0 +1,13 @@
+{
+ "creation": "2023-01-14 20:20:02.020532",
+ "docstatus": 0,
+ "doctype": "Dashboard Chart Source",
+ "idx": 0,
+ "modified": "2023-01-14 20:20:02.020532",
+ "modified_by": "Administrator",
+ "module": "Retail Report",
+ "name": "Sales Analytics",
+ "owner": "Administrator",
+ "source_name": "Sales Analytics",
+ "timeseries": 1
+}

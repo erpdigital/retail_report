@@ -1,0 +1,46 @@
+{
+ "cards": [
+  {
+   "card": "Total Outgoing Bills"
+  },
+  {
+   "card": "Total Outgoing Paid Bills"
+  },
+  {
+   "card": "Total Outgoing Partly Paid Bills"
+  },
+  {
+   "card": "Active Customers"
+  }
+ ],
+ "charts": [
+  {
+   "chart": "Outgoing Bills (Sales Invoice)",
+   "width": "Half"
+  },
+  {
+   "chart": "Customer gross profit -1",
+   "width": "Half"
+  },
+  {
+   "chart": "Item-wise sales history",
+   "width": "Full"
+  },
+  {
+   "chart": "Customer Sales",
+   "width": "Full"
+  }
+ ],
+ "creation": "2023-01-14 18:23:19.310400",
+ "dashboard_name": "Retail Selling",
+ "docstatus": 0,
+ "doctype": "Dashboard",
+ "idx": 0,
+ "is_default": 0,
+ "is_standard": 1,
+ "modified": "2023-01-14 22:38:01.730994",
+ "modified_by": "Administrator",
+ "module": "Retail Report",
+ "name": "Retail Selling",
+ "owner": "Administrator"
+}
