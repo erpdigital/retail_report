@@ -19,19 +19,15 @@
    "width": "Half"
   },
   {
-   "chart": "Customer gross profit",
-   "width": "Half"
-  },
-  {
-   "chart": "Item-wise sales history",
-   "width": "Full"
-  },
-  {
    "chart": "Customer Sales",
    "width": "Full"
   },
   {
    "chart": "Customer gross profit-1",
+   "width": "Full"
+  },
+  {
+   "chart": "Item-Category based sales",
    "width": "Half"
   }
  ],
@@ -42,7 +38,7 @@
  "idx": 0,
  "is_default": 0,
  "is_standard": 1,
- "modified": "2023-01-17 00:48:51.513245",
+ "modified": "2023-01-17 01:02:53.328897",
  "modified_by": "Administrator",
  "module": "Retail Report",
  "name": "Retail Selling",
