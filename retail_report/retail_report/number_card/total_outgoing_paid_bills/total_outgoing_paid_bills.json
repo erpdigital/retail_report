@@ -1,0 +1,22 @@
+{
+ "aggregate_function_based_on": "base_net_total",
+ "creation": "2023-01-14 21:51:32.631928",
+ "docstatus": 0,
+ "doctype": "Number Card",
+ "document_type": "Sales Invoice",
+ "filters_json": "[[\"Sales Invoice\",\"docstatus\",\"=\",\"1\",false],[\"Sales Invoice\",\"posting_date\",\"Timespan\",\"this year\",false],[\"Sales Invoice\",\"status\",\"in\",[\"Paid\"],false],[\"Sales Invoice\",\"company\",\"=\",\"Chynar\",false]]",
+ "function": "Sum",
+ "idx": 0,
+ "is_public": 1,
+ "is_standard": 1,
+ "label": "Total Outgoing Paid Bills",
+ "modified": "2023-01-17 00:39:24.244428",
+ "modified_by": "Administrator",
+ "module": "Retail Report",
+ "name": "Total Outgoing Paid Bills",
+ "owner": "Administrator",
+ "report_function": "Sum",
+ "show_percentage_stats": 1,
+ "stats_time_interval": "Monthly",
+ "type": "Document Type"
+}
