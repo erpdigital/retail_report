@@ -1,5 +1,5 @@
 {
- "add_total_row": 0,
+ "add_total_row": 1,
  "columns": [],
  "creation": "2023-01-14 20:54:01.036951",
  "disable_prepared_report": 0,
@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "json": "{\"columns\":[{\"label\":\"Item\",\"fieldname\":\"item_code\",\"fieldtype\":\"Link\",\"options\":\"Item\",\"width\":100,\"id\":\"item_code\",\"name\":\"Item\",\"editable\":false,\"compareValue\":null},{\"label\":\"Item Group\",\"fieldname\":\"item_group\",\"fieldtype\":\"Link\",\"options\":\"Item Group\",\"width\":100,\"id\":\"item_group\",\"name\":\"Item Group\",\"editable\":false,\"compareValue\":null},{\"label\":\"Warehouse\",\"fieldname\":\"warehouse\",\"fieldtype\":\"Link\",\"options\":\"Warehouse\",\"width\":100,\"id\":\"warehouse\",\"name\":\"Warehouse\",\"editable\":false,\"compareValue\":null},{\"label\":\"Balance Qty\",\"fieldname\":\"bal_qty\",\"fieldtype\":\"Float\",\"width\":100,\"convertible\":\"qty\",\"id\":\"bal_qty\",\"name\":\"Balance Qty\",\"editable\":false,\"compareValue\":null},{\"label\":\"In Qty\",\"fieldname\":\"in_qty\",\"fieldtype\":\"Float\",\"width\":80,\"convertible\":\"qty\",\"id\":\"in_qty\",\"name\":\"In Qty\",\"editable\":false,\"compareValue\":null},{\"label\":\"In Value\",\"fieldname\":\"in_val\",\"fieldtype\":\"Float\",\"width\":80,\"id\":\"in_val\",\"name\":\"In Value\",\"editable\":false,\"compareValue\":null},{\"label\":\"Out Qty\",\"fieldname\":\"out_qty\",\"fieldtype\":\"Float\",\"width\":80,\"convertible\":\"qty\",\"id\":\"out_qty\",\"name\":\"Out Qty\",\"editable\":false,\"compareValue\":null},{\"label\":\"Company\",\"fieldname\":\"company\",\"fieldtype\":\"Link\",\"options\":\"Company\",\"width\":100,\"id\":\"company\",\"name\":\"Company\",\"editable\":false,\"compareValue\":null}]}",
- "modified": "2023-01-14 20:54:56.038847",
+ "modified": "2023-03-11 20:08:24.076853",
  "modified_by": "Administrator",
  "module": "Retail Report",
  "name": "Stock Items Balance",
