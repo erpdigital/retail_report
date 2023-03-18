@@ -1,16 +1,17 @@
 // Copyright (c) 2015, Frappe Technologies Pvt. Ltd. and Contributors and contributors
 // For license information, please see license.txt
 
-frappe.query_reports["Supplier Item List"] = {
+frappe.query_reports["Stock Balance Supplier"] = {
 	"filters": [
 		{
-			"fieldname": "company",
-			"label": __("Company"),
+			"fieldname":"supplier",
+			"label": __("Supplier"),
 			"fieldtype": "Link",
 			"width": "80",
-			"options": "Company",
-			"default": frappe.defaults.get_default("company")
+			"options": "Supplier"
+			
 		},
+	
 		{
 			"fieldname":"from_date",
 			"label": __("From Date"),
@@ -103,4 +104,4 @@ frappe.query_reports["Supplier Item List"] = {
 	}
 };
 
-erpnext.utils.add_inventory_dimensions('Stock Balance', 8);
+//erpnext.utils.add_inventory_dimensions('Stock Balance Custom', 8);
