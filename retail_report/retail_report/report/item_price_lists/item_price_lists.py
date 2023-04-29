@@ -14,6 +14,7 @@ def execute(filters=None):
             "options": "Item",
             "width": 120
         },
+       
         {
             "label": "Skidka",
             "fieldname": "pr1",
@@ -46,6 +47,7 @@ def execute(filters=None):
     data = frappe.db.sql("""
         SELECT
             `tabItem`.`item_code`,
+            `tabItem`.`item_name`,
             IFNULL(`Pr1`.`price_list_rate`, 0) AS `pr1`,
             IFNULL(`Pr2`.`price_list_rate`, 0) AS `pr2`,
             IFNULL(`Pr3`.`price_list_rate`, 0) AS `pr3`,
