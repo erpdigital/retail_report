@@ -49,7 +49,7 @@ def execute(filters=None):
             IFNULL(`Pr1`.`price_list_rate`, 0) AS `pr1`,
             IFNULL(`Pr2`.`price_list_rate`, 0) AS `pr2`,
             IFNULL(`Pr3`.`price_list_rate`, 0) AS `pr3`,
-            IFNULL(`Pr4`.`price_list_rate`, 0) AS `pr4`,
+            IFNULL(`Pr4`.`price_list_rate`, 0) AS `pr4`
         FROM
             `tabItem`
             LEFT JOIN `tabItem Price` AS `Pr1`
