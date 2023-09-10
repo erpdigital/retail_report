@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "allow_rename": 1,
+ "creation": "2023-09-09 16:29:09.455662",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "invoice_status_settings_section",
+  "invoice"
+ ],
+ "fields": [
+  {
+   "fieldname": "invoice_status_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Invoice Status Settings"
+  },
+  {
+   "fieldname": "invoice",
+   "fieldtype": "Table",
+   "label": "Invoice",
+   "options": "Report Settings Table"
+  }
+ ],
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2023-09-09 16:31:41.033602",
+ "modified_by": "Administrator",
+ "module": "Custom Report",
+ "name": "Report Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
