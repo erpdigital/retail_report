@@ -156,26 +156,22 @@ class PartyLedgerSummaryReport(object):
 		self.party_data = frappe._dict({})
 		invoiced_amount_ = opening_balance_ = paid_amount_ = return_amount_ = closing_balance_ = 0.0
 		for gle in self.gl_entries:
-			get_group = frappe.db.sql(""" select customer_group from `tabCustomer` where name='{0}'""".format(gle.party))
-			get_status = frappe.db.sql(""" select status from `tabSales Invoice` where docstatus!=2 and customer='{0}' """.format(gle.party))
+			get_group = frappe.db.get_value("Customer", str(gle.party), "customer_group")
+			get_status = frappe.db.sql(""" SELECT CASE
+        WHEN OverdueCount > 0 THEN 'Overdue'
+        WHEN UnpaidCount > 0 THEN 'Unpaid'
+        WHEN PartlyPaidCount > 0 THEN 'Partly Paid'
+        WHEN PaidCount > 0 THEN 'Paid'
+        ELSE ''
+    END AS Status FROM( SELECT (SELECT COUNT(*) FROM `tabSales Invoice` WHERE customer = '{0}' AND status = 'Overdue' and docstatus=1) AS OverdueCount, (SELECT COUNT(*) FROM `tabSales Invoice` WHERE customer = '{0}' AND status = 'Unpaid' and docstatus=1) AS UnpaidCount, (SELECT COUNT(*) FROM `tabSales Invoice` WHERE customer = '{0}' AND status = 'Partly Paid' and docstatus=1) AS PartlyPaidCount, (SELECT COUNT(*) FROM `tabSales Invoice` WHERE customer = '{0}' AND status = 'Paid' and docstatus=1) AS PaidCount) AS PaidCount """.format(gle.party))
 			payments_ = 0.0
 			get_payments = frappe.db.sql(""" select IFNULL(sum(unallocated_amount), 0) from `tabPayment Entry` where docstatus =1 and party='{0}' """.format(gle.party))
 			if get_payments:
 				payments_ = get_payments[0][0]
-			status_list = []
-			if get_status:
-				for x in get_status:
-					if x[0] not in status_list:
-						status_list.append(x[0])
 			status_ = ''
-			if "Paid" in status_list:
-				status_ = "Paid"
-			if "Partly Paid" in status_list:
-				status_ = "Partly Paid"
-			if "Unpaid" in status_list:
-				status_ = "Unpaid"
-			if "Overdue" in status_list:
-				status_ = "Overdue"
+			if get_status:
+				status_ = get_status[0][0]
+			
 			color_ = '#FFFFFF'
 			get_color = frappe.db.sql(""" select color from `tabReport Settings Table` where status='{0}' """.format(status_))
 			if get_color:
@@ -186,7 +182,7 @@ class PartyLedgerSummaryReport(object):
 					{
 						"party": gle.party,
 						"party_name": gle.party_name,
-						"customer_group": get_group[0][0],
+						"customer_group": get_group,
 						"status": str(status_),
 						"color": color_,
 						"opening_balance": 0,
@@ -247,7 +243,6 @@ class PartyLedgerSummaryReport(object):
 				if row['status'] == 'Paid':
 					paid_list.append(row)
 		out = overdue_list + unpaid_list + partial_list + paid_list
-		#out.append(['','','','', opening_balance_, invoiced_amount_, paid_amount_, return_amount_, closing_balance_, ''])
 		return out
 
 	def get_gl_entries(self):
