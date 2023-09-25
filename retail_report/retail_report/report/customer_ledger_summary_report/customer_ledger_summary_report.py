@@ -47,6 +47,7 @@ class PartyLedgerSummaryReport(object):
 				"fieldtype": "Link",
 				"fieldname": "customer_group",
 				"options": "Customer Group",
+				"hidden": 1,
 				"width": 200,
 			},
 			{
@@ -60,6 +61,7 @@ class PartyLedgerSummaryReport(object):
 				"label": _("Color"),
 				"fieldtype": "Data",
 				"fieldname": "color",
+				"hidden": 1,
 				"width": 100,
 			}
 		]
