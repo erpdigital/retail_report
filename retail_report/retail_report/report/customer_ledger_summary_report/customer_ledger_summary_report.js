@@ -95,41 +95,19 @@ frappe.query_reports["Customer Ledger Summary Report"] = {
 		}
 	],
 	"formatter": function(value, row, column, data, default_formatter) {
-
-		if(data['status'] == "Unpaid" && column['content'] == 'Customer') {
-			value = $(`<span class="span-Unpaid">${data['party']}</span>`);
-			var $value = $(value).css("font-weight", "normal");
-		} else if(data['status'] == "Overdue" && column['content'] == 'Customer') {
-			value = $(`<span class="span-Overdue">${data['party']}</span>`);
-			var $value = $(value).css("font-weight", "normal");
-		} else if(data['status'] == "Paid" && column['content'] == 'Customer') {
-			value = $(`<span class="span-Paid">${data['party']}</span>`);
-			var $value = $(value).css("font-weight", "normal");
-		} else if(data['status'] == "Partly Paid" && column['content'] == 'Customer') {
-			value = $(`<span class="span-Partly">${data['party']}</span>`);
-			var $value = $(value).css("font-weight", "normal");
-		}
-		else {
-			value = $(`<span>${value}</span>`);
-			var $value = $(value).css("font-weight", "normal");
-		}
-
-		setTimeout(function(){
-			if(data['status'] == "Unpaid"){
-				$( "span.span-Unpaid" ).closest("div").css( {"background-color":data['color'], "color": "white"} );
-			} 
-			if(data['status'] == "Overdue"){
-				$( "span.span-Overdue" ).closest("div").css( {"background-color":data['color'], "color": "white"} );
+		// Check if the current column is 'status'
+		if (column['fieldname'] === 'status') {
+			if (data['status'] === 'Unpaid') {
+				value= `<span class="span-Unpaid" style="background-color: ${data['color']}">${value}</span>`;
+			} else if (data['status'] === 'Overdue') {
+				value= `<span class="span-Overdue" style="background-color:${data['color']}">${value}</span>`;
+			} else if (data['status'] === 'Paid') {
+				value= `<span class="span-Paid" style="background-color: ${data['color']}">${value}</span>`;
+			} else if (data['status'] === 'Partly Paid') {
+				value= `<span class="span-Partly" style="background-color: ${data['color']}">${value}</span>`;
 			}
-			if(data['status'] == "Paid"){
-				$( "span.span-Paid" ).closest("div").css( {"background-color":data['color'], "color": "white"} );
-			} 
-			if(data['status'] == "Partly Paid"){
-				$( "span.span-Partly" ).closest("div").css( {"background-color":data['color'], "color": "white"} );
-			} 
-			
-		}, 1);
-		value = $value.wrap("<p></p>").parent().html();
-		return value;
+		}
+		return default_formatter(value, row, column, data);
 	}
+	
 };
