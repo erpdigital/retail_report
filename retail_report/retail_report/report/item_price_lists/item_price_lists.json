@@ -1,7 +1,7 @@
 {
  "add_total_row": 0,
  "columns": [],
- "creation": "2023-04-29 15:15:46.510153",
+ "creation": "2023-04-29 15:58:03.322654",
  "disable_prepared_report": 0,
  "disabled": 0,
  "docstatus": 0,
@@ -9,21 +9,20 @@
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2023-04-29 15:15:46.510153",
+ "json": "{}",
+ "letter_head": "Default",
+ "modified": "2023-04-29 15:58:06.413290",
  "modified_by": "Administrator",
  "module": "Retail Report",
  "name": "Item Price Lists",
  "owner": "Administrator",
  "prepared_report": 0,
- "ref_doctype": "Item",
+ "ref_doctype": "Warehouse",
  "report_name": "Item Price Lists",
  "report_type": "Script Report",
  "roles": [
   {
    "role": "Item Manager"
-  },
-  {
-   "role": "Stock Manager"
   },
   {
    "role": "Stock User"
@@ -35,16 +34,10 @@
    "role": "Purchase User"
   },
   {
-   "role": "Maintenance User"
-  },
-  {
    "role": "Accounts User"
   },
   {
    "role": "Manufacturing User"
-  },
-  {
-   "role": "All"
   }
  ]
 }
