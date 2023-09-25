@@ -53,14 +53,13 @@ class PartyLedgerSummaryReport(object):
 				"label": _("Status"),
 				"fieldtype": "Data",
 				"fieldname": "status",
-				"hidden": 1,
+			
 				"width": 100,
 			},
 			{
 				"label": _("Color"),
 				"fieldtype": "Data",
 				"fieldname": "color",
-				"hidden": 1,
 				"width": 100,
 			}
 		]
@@ -152,45 +151,28 @@ class PartyLedgerSummaryReport(object):
 		)
 		invoice_dr_or_cr = "debit" if self.filters.party_type == "Customer" else "credit"
 		reverse_dr_or_cr = "credit" if self.filters.party_type == "Customer" else "debit"
-
+		
+		
 		self.party_data = frappe._dict({})
 		invoiced_amount_ = opening_balance_ = paid_amount_ = return_amount_ = closing_balance_ = 0.0
 		for gle in self.gl_entries:
-			get_group = frappe.db.get_value("Customer", str(gle.party), "customer_group")
-			get_status = frappe.db.sql(""" SELECT CASE
-        WHEN OverdueCount > 0 THEN 'Overdue'
-        WHEN UnpaidCount > 0 THEN 'Unpaid'
-        WHEN PartlyPaidCount > 0 THEN 'Partly Paid'
-        WHEN PaidCount > 0 THEN 'Paid'
-        ELSE ''
-    END AS Status FROM( SELECT (SELECT COUNT(*) FROM `tabSales Invoice` WHERE customer = '{0}' AND status = 'Overdue' and docstatus=1) AS OverdueCount, (SELECT COUNT(*) FROM `tabSales Invoice` WHERE customer = '{0}' AND status = 'Unpaid' and docstatus=1) AS UnpaidCount, (SELECT COUNT(*) FROM `tabSales Invoice` WHERE customer = '{0}' AND status = 'Partly Paid' and docstatus=1) AS PartlyPaidCount, (SELECT COUNT(*) FROM `tabSales Invoice` WHERE customer = '{0}' AND status = 'Paid' and docstatus=1) AS PaidCount) AS PaidCount """.format(gle.party))
-			payments_ = 0.0
-			get_payments = frappe.db.sql(""" select IFNULL(sum(unallocated_amount), 0) from `tabPayment Entry` where docstatus =1 and party='{0}' """.format(gle.party))
-			if get_payments:
-				payments_ = get_payments[0][0]
-			status_ = ''
-			if get_status:
-				status_ = get_status[0][0]
 			
-			color_ = '#FFFFFF'
-			get_color = frappe.db.sql(""" select color from `tabReport Settings Table` where status='{0}' """.format(status_))
-			if get_color:
-				color_ = get_color[0][0]
+		
 			self.party_data.setdefault(
 				gle.party,
 				frappe._dict(
 					{
 						"party": gle.party,
 						"party_name": gle.party_name,
-						"customer_group": get_group,
-						"status": str(status_),
-						"color": color_,
+						"customer_group": '',
+						"status":'1',
+						"color": '#FAFFFF',
 						"opening_balance": 0,
 						"invoiced_amount": 0,
 						"paid_amount": 0,
 						"return_amount": 0,
 						"closing_balance": 0,
-						"advance_payments": payments_,
+						"advance_payments": '',
 						"currency": company_currency,
 					}
 				),
@@ -213,6 +195,50 @@ class PartyLedgerSummaryReport(object):
 					self.party_data[gle.party].paid_amount -= amount
 					paid_amount_ += self.party_data[gle.party].paid_amount
 
+		all_customers = frappe.get_all('Customer', fields=['name','customer_group'])
+		
+		# Step 2: For each customer, fetch their sales invoices
+		for customer in all_customers:
+			customer_group = customer.get('customer_group') 
+			customer_name = customer.get('name')
+			overdue = frappe.db.get_value(
+    			'Sales Invoice',
+    			filters={'customer': customer_name, 'status': 'Overdue'},
+    			fieldname='status',
+   			 order_by='due_date ASC')
+			 
+			Unpaid = frappe.db.get_value(
+    			'Sales Invoice',
+    			filters={'customer': customer_name, 'status': 'Unpaid'},
+    			fieldname='status',
+   			 order_by='due_date ASC')
+			partpaid = frappe.db.get_value(
+    			'Sales Invoice',
+    			filters={'customer': customer_name, 'status': 'Partly Paid'},
+    			fieldname='status',
+   			 order_by='due_date ASC')
+			paid =	frappe.db.get_value(
+    			'Sales Invoice',
+    			filters={'customer': customer_name, 'status': 'Paid'},
+    			fieldname='status',
+   			 order_by='due_date ASC')
+			if overdue:
+				status = overdue
+			elif Unpaid:
+				status = Unpaid
+			elif partpaid:
+				status = partpaid	
+			else:
+				status = paid
+			color = '#FFFFFF'
+			get_color = frappe.db.sql(""" select color from `tabReport Settings Table` where status='{0}' """.format(status))
+			if get_color:
+				color = get_color[0][0]
+			if customer_name in self.party_data:	
+				self.party_data[customer_name].status = status
+				self.party_data[customer_name].color = color	
+				self.party_data[customer_name].customer_group = customer_group
+		
 		out = []
 		overdue_list = []
 		unpaid_list = []
