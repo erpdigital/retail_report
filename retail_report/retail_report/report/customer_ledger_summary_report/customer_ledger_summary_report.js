@@ -93,21 +93,6 @@ frappe.query_reports["Customer Ledger Summary Report"] = {
 			"fieldtype": "Data",
 			"hidden": 1
 		}
-	],
-	"formatter": function(value, row, column, data, default_formatter) {
-		// Check if the current column is 'status'
-		if (column['fieldname'] === 'status') {
-			if (data['status'] === 'Unpaid') {
-				value= `<span class="span-Unpaid" style="background-color: ${data['color']}">${value}</span>`;
-			} else if (data['status'] === 'Overdue') {
-				value= `<span class="span-Overdue" style="background-color:${data['color']}">${value}</span>`;
-			} else if (data['status'] === 'Paid') {
-				value= `<span class="span-Paid" style="background-color: ${data['color']}">${value}</span>`;
-			} else if (data['status'] === 'Partly Paid') {
-				value= `<span class="span-Partly" style="background-color: ${data['color']}">${value}</span>`;
-			}
-		}
-		return default_formatter(value, row, column, data);
-	}
+	]
 	
 };

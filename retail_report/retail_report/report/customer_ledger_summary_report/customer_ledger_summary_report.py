@@ -52,10 +52,10 @@ class PartyLedgerSummaryReport(object):
 			},
 			{
 				"label": _("Status"),
-				"fieldtype": "Data",
+				"fieldtype": "HTML",
 				"fieldname": "status",
 			
-				"width": 100,
+				"width": 500,
 			},
 			{
 				"label": _("Color"),
@@ -237,7 +237,7 @@ class PartyLedgerSummaryReport(object):
 			if get_color:
 				color = get_color[0][0]
 			if customer_name in self.party_data:	
-				self.party_data[customer_name].status = status
+				self.party_data[customer_name].status =f'<span class="span-Status" style="background-color:{color}">{status}</span>' 
 				self.party_data[customer_name].color = color	
 				self.party_data[customer_name].customer_group = customer_group
 		
@@ -262,13 +262,13 @@ class PartyLedgerSummaryReport(object):
 				adjustments = self.party_adjustment_details.get(party, {})
 				for account in self.party_adjustment_accounts:
 					row["adj_" + scrub(account)] = adjustments.get(account, 0)
-				if row['status'] == 'Overdue':
+				if 'Overdue' in row['status'] :
 					overdue_list.append(row)
-				if row['status'] == 'Unpaid':
+				elif 'Unpaid' in row['status']:
 					unpaid_list.append(row)
-				if row['status'] == 'Partly Paid':
+				elif  'Partly Paid' in row['status']:
 					partial_list.append(row)
-				if row['status'] == 'Paid':
+				elif  'Paid' in row['status']:
 					paid_list.append(row)
 		out = overdue_list + unpaid_list + partial_list + paid_list
 		return out
