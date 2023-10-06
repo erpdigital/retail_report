@@ -16,6 +16,14 @@ frappe.query_reports["Item Price Lists"] = {
 					}
 				}
 			}
+		},
+		{
+			"fieldname": "uom",
+			"label": __("Unit of Measure"),
+			"fieldtype": "Link",
+			"options": "UOM",
+			
+			"reqd": 0 // Set to 1 if you want this field to be mandatory
 		}
 	],
 	"onload": function(report) {

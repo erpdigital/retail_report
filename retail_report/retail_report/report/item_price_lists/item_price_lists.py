@@ -14,6 +14,13 @@ def execute(filters=None):
             "options": "Item",
             "width": 120
         },
+             {
+            "label": "Item Name",
+            "fieldname": "item_name",
+            "fieldtype": "Link",
+            "options": "Item",
+            "width": 120
+        },
        
         {
             "label": "Skidka",
@@ -64,8 +71,9 @@ def execute(filters=None):
                 ON `tabItem`.`item_code` = `Pr4`.`item_code` AND `Pr4`.`price_list` = 'Optom 2'
         WHERE
             `tabItem`.`item_group` = '{0}'
+             AND `tabItem`.`stock_uom` = '{1}'            
         ORDER BY
             `tabItem`.`item_code`
-    """.format(filters.get("item_group")), as_dict=True)
+    """.format(filters.get("item_group"),filters.get("uom")), as_dict=True)
 
     return columns, data
