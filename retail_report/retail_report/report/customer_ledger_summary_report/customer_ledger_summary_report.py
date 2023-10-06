@@ -40,7 +40,7 @@ class PartyLedgerSummaryReport(object):
 				"fieldtype": "Link",
 				"fieldname": "party",
 				"options": self.filters.party_type,
-				"width": 200,
+				"width": 120,
 			},
 			{
 				"label": _("Customer Group"),
@@ -48,14 +48,14 @@ class PartyLedgerSummaryReport(object):
 				"fieldname": "customer_group",
 				"options": "Customer Group",
 				"hidden": 1,
-				"width": 200,
+				"width": 100,
 			},
 			{
 				"label": _("Status"),
 				"fieldtype": "HTML",
 				"fieldname": "status",
 			
-				"width": 500,
+				"width": 50,
 			},
 			{
 				"label": _("Color"),
@@ -236,11 +236,18 @@ class PartyLedgerSummaryReport(object):
 			get_color = frappe.db.sql(""" select color from `tabReport Settings Table` where status='{0}' """.format(status))
 			if get_color:
 				color = get_color[0][0]
+			# Get the current date
+			current_date = frappe.utils.today()	
+			total_amount = frappe.db.sql("""
+        SELECT SUM(outstanding_amount) 
+        FROM `tabSales Invoice`
+        WHERE customer_name = %s and  due_date < %s and docstatus = 1 
+    """, (customer_name,current_date))	
 			if customer_name in self.party_data:	
 				self.party_data[customer_name].status =f'<span class="span-Status" style="background-color:{color}">{status}</span>' 
 				self.party_data[customer_name].color = color	
 				self.party_data[customer_name].customer_group = customer_group
-		
+				self.party_data[customer_name].advance_payments = total_amount[0][0] if total_amount and total_amount[0][0] else 0
 		out = []
 		overdue_list = []
 		unpaid_list = []
