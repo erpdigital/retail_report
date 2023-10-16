@@ -33,7 +33,10 @@ class Analytics(object):
 			date_list.append(str(current_date).split(" ")[0])
 			current_date += timedelta(days=1)
 		if self.filters.supplier:
-			get_supp_data = frappe.db.sql("""select based_on_value from `tabParty Specific Item` where restrict_based_on='Item' and party_type='Supplier' and party=%s """,(self.filters.supplier))
+			if self.filters.item:
+				get_supp_data = frappe.db.sql("""select based_on_value from `tabParty Specific Item` where based_on_value=%s and party_type='Supplier' and party=%s """,(self.filters.item,self.filters.supplier))
+			else:
+				get_supp_data = frappe.db.sql("""select based_on_value from `tabParty Specific Item` where restrict_based_on='Item' and party_type='Supplier' and party=%s """,(self.filters.supplier))
 			if get_supp_data:
 				for x in get_supp_data:
 					items_list.append(str(x[0]))
@@ -90,9 +93,11 @@ class Analytics(object):
 			entity = "supplier as entity"
 			entity_name = "supplier_name as entity_name"
 		
-		
-		self.entries = frappe.db.sql("""select {0}, {1}, {2}, {3}, chd.item_code as item_code from `tab{4}` as sal inner join `tabSales Invoice Item` as chd on sal.name=chd.parent  where sal.docstatus=1 and sal.company='{5}' and {3} between '{6}' and '{7}' and chd.item_code in {8} """.format(entity, entity_name, value_field, self.date_field, self.filters.doc_type, self.filters.company,self.filters.from_date, self.filters.to_date, tuple(items_list)), as_dict=1)
-		
+		if len(items_list) > 1:
+			self.entries = frappe.db.sql("""select {0}, {1}, {2}, {3}, chd.item_code as item_code from `tab{4}` as sal inner join `tabSales Invoice Item` as chd on sal.name=chd.parent  where sal.docstatus=1 and sal.company='{5}' and {3} between '{6}' and '{7}' and chd.item_code in {8} """.format(entity, entity_name, value_field, self.date_field, self.filters.doc_type, self.filters.company,self.filters.from_date, self.filters.to_date, tuple(items_list)), as_dict=1)
+		else:
+			self.entries = frappe.db.sql("""select {0}, {1}, {2}, {3}, chd.item_code as item_code from `tab{4}` as sal inner join `tabSales Invoice Item` as chd on sal.name=chd.parent  where sal.docstatus=1 and sal.company='{5}' and {3} between '{6}' and '{7}' and chd.item_code = {8} """.format(entity, entity_name, value_field, self.date_field, self.filters.doc_type, self.filters.company,self.filters.from_date, self.filters.to_date, items_list[0]), as_dict=1)
+			
 		self.entity_names = {}
 		for d in self.entries:
 			self.entity_names.setdefault(d.entity, d.entity_name)

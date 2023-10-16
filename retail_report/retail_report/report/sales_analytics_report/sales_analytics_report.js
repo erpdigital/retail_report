@@ -11,6 +11,16 @@ frappe.query_reports["Sales Analytics Report"] = {
 			options: "Supplier",
 			reqd: 1
 		},
+		
+		{
+			fieldname: "item",
+			label: __("Item"),
+			fieldtype: "Link",
+			options: "Item",  // Change this to the appropriate doctype for party specific items
+		
+			reqd: 0  // Set to 1 if you want to make it a required field
+ // Show this filter only if a supplier is selected
+		},
 		{
 			fieldname: "tree_type",
 			label: __("Tree Type"),
