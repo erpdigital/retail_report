@@ -206,6 +206,12 @@ class PartyLedgerSummaryReport(object):
 					paid_amount_ += self.party_data[gle.party].paid_amount
 
 		all_customers = frappe.get_all('Customer', fields=['name','customer_group','payment_terms'])
+		total_amount = frappe.db.sql("""
+        SELECT customer_name, SUM(outstanding_amount)
+        FROM `tabSales Invoice`
+        WHERE  status = %s and docstatus = 1 group by customer_name
+    """, ('Overdue'))	
+		result_total = {row[0]: row[1] for row in total_amount}
 		
 		# Step 2: For each customer, fetch their sales invoices
 		for customer in all_customers:
@@ -217,18 +223,20 @@ class PartyLedgerSummaryReport(object):
     			filters={'customer': customer_name, 'status': 'Overdue'},
     			fieldname='status',
    			 order_by='due_date ASC')
-			 
-			Unpaid = frappe.db.get_value(
+			if not overdue: 
+				Unpaid = frappe.db.get_value(
     			'Sales Invoice',
     			filters={'customer': customer_name, 'status': 'Unpaid'},
     			fieldname='status',
    			 order_by='due_date ASC')
-			partpaid = frappe.db.get_value(
+			if not Unpaid:
+				partpaid = frappe.db.get_value(
     			'Sales Invoice',
     			filters={'customer': customer_name, 'status': 'Partly Paid'},
     			fieldname='status',
    			 order_by='due_date ASC')
-			paid =	frappe.db.get_value(
+			if not Unpaid:
+				paid =	frappe.db.get_value(
     			'Sales Invoice',
     			filters={'customer': customer_name, 'status': 'Paid'},
     			fieldname='status',
@@ -247,16 +255,15 @@ class PartyLedgerSummaryReport(object):
 				color = get_color[0][0]
 			# Get the current date
 			current_date = frappe.utils.today()	
-			total_amount = frappe.db.sql("""
-        SELECT SUM(outstanding_amount) 
-        FROM `tabSales Invoice`
-        WHERE customer_name = %s and  status = %s and docstatus = 1 
-    """, (customer_name,'Overdue'))	
+			
 			if customer_name in self.party_data:	
 				self.party_data[customer_name].status =f'<span class="span-Status" style="background-color:{color}">{status}</span>' 
 				self.party_data[customer_name].color = color	
 				self.party_data[customer_name].customer_group = customer_group
-				self.party_data[customer_name].advance_payments = total_amount[0][0] if total_amount and total_amount[0][0] else 0
+				if customer_name in result_total:
+					self.party_data[customer_name].advance_payments = result_total[customer_name]
+				else:
+					self.party_data[customer_name].advance_payments = 0 
 				self.party_data[customer_name].credit_days = credit_days
 		out = []
 		overdue_list = []
