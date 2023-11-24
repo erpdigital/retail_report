@@ -25,7 +25,7 @@ def execute(filters=None):
 				[
 					d.name,
 					d.customer,
-					
+					d.selling_price_list,
 					d.territory,
 				
 					d.posting_date,
@@ -66,6 +66,13 @@ def get_columns(filters):
 			"label": _("Customer"),
 			"options": "Customer",
 			"fieldname": "customer",
+			"fieldtype": "Link",
+			"width": 70,
+		},
+		{
+			"label": _("Price List"),
+			"options": "Price List",
+			"fieldname": "price_list",
 			"fieldtype": "Link",
 			"width": 70,
 		},
@@ -160,7 +167,7 @@ def get_entries(filters):
 		"""
 		SELECT
 			dt.name, dt.customer, dt.territory, dt.%s as posting_date, dt_item.item_code, dt_item.item_name,
-			st.sales_person, st.allocated_percentage, dt_item.warehouse,
+			st.sales_person, st.allocated_percentage, dt_item.warehouse,dt.selling_price_list,
 		CASE
 			WHEN dt.status = "Closed" THEN dt_item.%s * dt_item.conversion_factor
 			ELSE dt_item.stock_qty
@@ -169,17 +176,20 @@ def get_entries(filters):
 			WHEN dt.status = "Closed" THEN (dt_item.base_net_rate * dt_item.%s * dt_item.conversion_factor)
 			ELSE dt_item.base_net_amount
 		END as base_net_amount,
-		it.bonus*stock_qty as bonus,
+		it_price.bonus*stock_qty as bonus,
 
 		CASE
 			WHEN dt.status = "Closed" THEN ((dt_item.base_net_rate * dt_item.%s * dt_item.conversion_factor) * st.allocated_percentage/100)
 			ELSE dt_item.base_net_amount * st.allocated_percentage/100
 		END as contribution_amt
 		FROM
-			`tab%s` dt, `tab%s Item` dt_item, `tabSales Team` st, `tabItem` it
+			`tab%s` dt, `tab%s Item` dt_item, `tabSales Team` st, `tabItem` it, `tabItem Price` it_price 
 		WHERE
 			st.parent = dt.name and dt.name = dt_item.parent and dt_item.item_code = it.item_code 
 			  and st.parenttype = %s
+			  and dt_item.item_code = it_price.item_code
+			  and dt.selling_price_list = it_price.price_list
+			  and dt_item.uom = it_price.uom
 			and dt.docstatus = 1 %s order by st.sales_person, dt.name desc
 		"""
 		% (
