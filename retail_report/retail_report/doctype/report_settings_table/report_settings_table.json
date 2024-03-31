@@ -16,7 +16,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "\nOverdue\nUnpaid\nPartly Paid\nPaid",
+   "options": "\nOverdue\nUnpaid\nPartly Paid\nPaid\nLimit OK\nLimit Warning\nLimit Attention",
    "reqd": 1
   },
   {
@@ -31,7 +31,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2023-09-10 00:27:25.777718",
+ "modified": "2024-03-29 20:24:46.142147",
  "modified_by": "Administrator",
  "module": "Retail Report",
  "name": "Report Settings Table",
