@@ -144,6 +144,12 @@ class PartyLedgerSummaryReport(object):
 				"width": 120,
 			},
 			{
+				"label": _("Taro Credits"),
+				"fieldname": "taro_credits",
+				"fieldtype": "Int",
+				"width": 120,
+			},
+			{
 				"label": _("Currency"),
 				"fieldname": "currency",
 				"fieldtype": "Link",
@@ -286,7 +292,7 @@ class PartyLedgerSummaryReport(object):
 
 				adjustments = self.party_adjustment_details.get(party, {})
 				"Addition Taro Credit"
-				#row.taro_credits = get_sales_invoice_item_qty(party,  self.filters.get("company"),'1003')
+				row.taro_credits = get_sales_invoice_item_qty(party,  self.filters.get("company"),'1003')
 				for account in self.party_adjustment_accounts:
 					row["adj_" + scrub(account)] = adjustments.get(account, 0)
 				if 'Overdue' in row['status'] :

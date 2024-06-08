@@ -85,9 +85,9 @@ def execute(filters: Optional[StockBalanceFilter] = None):
 			stock_a = get_projected_qty(item, 'Склад А - C')
 			stock_b = get_projected_qty(item, 'Склад Б - C')
 			limit_sign = 0
-			limit = item_map[item].limit 
-			limit_075 = item_map[item].limit * 0.75 
-			if item_map[item].limit > qty_dict.bal_qty:
+			limit = flt(item_map[item].limit) 
+			limit_075 = flt(item_map[item].limit) * 0.75 
+			if flt(item_map[item].limit) > qty_dict.bal_qty:
 				limit_sign = 2
 				status = 'Limit Attention'
 			elif limit_075 > qty_dict.bal_qty:
