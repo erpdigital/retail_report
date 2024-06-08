@@ -9,7 +9,7 @@
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2023-09-27 00:58:10.145433",
+ "modified": "2023-10-04 00:19:05.974566",
  "modified_by": "Administrator",
  "module": "Retail Report",
  "name": "Customer Ledger Summary Report",
@@ -26,7 +26,7 @@
    "role": "Accounts User"
   },
   {
-   "role": "All"
+   "role": "Sales User"
   }
  ]
 }
