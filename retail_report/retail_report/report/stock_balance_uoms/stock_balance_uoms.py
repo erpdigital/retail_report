@@ -19,7 +19,6 @@ from erpnext.stock.utils import add_additional_uom_columns, is_reposting_item_va
 
 
 class StockBalanceFilter(TypedDict):
-	supplier: Optional[str]
 	company: Optional[str]
 	from_date: str
 	to_date: str
@@ -60,11 +59,13 @@ def execute(filters: Optional[StockBalanceFilter] = None):
 
 	iwb_map = get_item_warehouse_map(filters, sle)
 	item_map = get_item_details(items, sle, filters)
-	#item_reorder_detail_map = get_item_reorder_details(item_map.keys())
+	item_reorder_detail_map = get_item_reorder_details(item_map.keys())
 
 	data = []
 	conversion_factors = {}
-
+	  # Retrieve the highest UOM conversion factor for each item
+	
+	highest_uom_map = get_highest_uom_conversions(items)
 	_func = itemgetter(1)
 
 	to_date = filters.get("to_date")
@@ -78,31 +79,10 @@ def execute(filters: Optional[StockBalanceFilter] = None):
 			qty_dict = iwb_map[group_by_key]
 			item_reorder_level = 0
 			item_reorder_qty = 0
-		#	if item + warehouse in item_reorder_detail_map:
-		#		item_reorder_level = item_reorder_detail_map[item + warehouse]["warehouse_reorder_level"]
-		#		item_reorder_qty = item_reorder_detail_map[item + warehouse]["warehouse_reorder_qty"]
-			stock_magazin = get_projected_qty(item, 'Магазины - C')
-			stock_a = get_projected_qty(item, 'Склад А - C')
-			stock_b = get_projected_qty(item, 'Склад Б - C')
-			limit_sign = 0
-			limit = flt(item_map[item].limit) 
-			limit_075 = flt(item_map[item].limit) * 0.75 
-			if flt(item_map[item].limit) > qty_dict.bal_qty:
-				limit_sign = 2
-				status = 'Limit Attention'
-			elif limit_075 > qty_dict.bal_qty:
-				limit_sign = 1
-				status = 'Limit Warning'
-			else:
-				limit_sign =0	
-				status = 'Limit OK'
+			if item + warehouse in item_reorder_detail_map:
+				item_reorder_level = item_reorder_detail_map[item + warehouse]["warehouse_reorder_level"]
+				item_reorder_qty = item_reorder_detail_map[item + warehouse]["warehouse_reorder_qty"]
 
-			get_color = frappe.db.sql(""" select color from `tabReport Settings Table` where status='{0}' """.format(status))
-			
-			if get_color:
-					color = get_color[0][0]
-					limit = f'<span class="span-Status" style="background-color:{color}">{item_map[item].limit}</span>' 	
-			item_map[item].limit = limit
 			report_data = {
 				"currency": company_currency,
 				"item_code": item,
@@ -110,17 +90,22 @@ def execute(filters: Optional[StockBalanceFilter] = None):
 				"company": company,
 				"reorder_level": item_reorder_level,
 				"reorder_qty": item_reorder_qty,
-				"stock_magazin": stock_magazin,
-				"stock_a": stock_a,
-				"stock_b": stock_b,
-				"limit_sign": limit_sign,
-				"limit":limit
 			}
 			report_data.update(item_map[item])
 			report_data.update(qty_dict)
-		
-			
 
+			  # Calculate Alternate UOM Quantity
+			if  item in highest_uom_map:
+				alt_uom_info = highest_uom_map[item]
+				alt_uom = alt_uom_info.get("uom")
+				conversion_factor = alt_uom_info.get("conversion_factor", 1.0)
+
+				# Ensure bal_qty is a float
+				bal_qty = flt(qty_dict.get("bal_qty", 0.0))
+				conversion_factor = flt(conversion_factor, 6)
+				report_data["alt_uom_qty"] =  flt(bal_qty / conversion_factor, 3)
+			else:
+				report_data["alt_uom_qty"] = 0.0  # Default to 0 if no conversion available
 			if include_uom:
 				conversion_factors.setdefault(item, item_map[item].conversion_factor)
 
@@ -142,7 +127,6 @@ def execute(filters: Optional[StockBalanceFilter] = None):
 			data.append(report_data)
 
 	add_additional_uom_columns(columns, data, include_uom, conversion_factors)
-	data = sorted(data, key=lambda x: x["limit"], reverse=True)
 	return columns, data
 
 
@@ -163,7 +147,14 @@ def get_columns(filters: StockBalanceFilter):
 			"fieldtype": "Link",
 			"options": "Item Group",
 			"width": 100,
-		}
+		},
+		{
+			"label": _("Warehouse"),
+			"fieldname": "warehouse",
+			"fieldtype": "Link",
+			"options": "Warehouse",
+			"width": 100,
+		},
 	]
 
 	for dimension in get_inventory_dimensions():
@@ -193,6 +184,13 @@ def get_columns(filters: StockBalanceFilter):
 				"width": 100,
 				"convertible": "qty",
 			},
+			   {
+                "label": _("Balance QTY(Bundle)"),
+                "fieldname": "alt_uom_qty",
+                "fieldtype": "Float",
+                "width": 100,
+                "convertible": "qty",
+            },
 			{
 				"label": _("Balance Value"),
 				"fieldname": "bal_val",
@@ -200,7 +198,36 @@ def get_columns(filters: StockBalanceFilter):
 				"width": 100,
 				"options": "currency",
 			},
-			
+			{
+				"label": _("Opening Qty"),
+				"fieldname": "opening_qty",
+				"fieldtype": "Float",
+				"width": 100,
+				"convertible": "qty",
+			},
+			{
+				"label": _("Opening Value"),
+				"fieldname": "opening_val",
+				"fieldtype": "Currency",
+				"width": 110,
+				"options": "currency",
+			},
+			{
+				"label": _("In Qty"),
+				"fieldname": "in_qty",
+				"fieldtype": "Float",
+				"width": 80,
+				"convertible": "qty",
+			},
+			{"label": _("In Value"), "fieldname": "in_val", "fieldtype": "Float", "width": 80},
+			{
+				"label": _("Out Qty"),
+				"fieldname": "out_qty",
+				"fieldtype": "Float",
+				"width": 80,
+				"convertible": "qty",
+			},
+			{"label": _("Out Value"), "fieldname": "out_val", "fieldtype": "Float", "width": 80},
 			{
 				"label": _("Valuation Rate"),
 				"fieldname": "val_rate",
@@ -209,43 +236,27 @@ def get_columns(filters: StockBalanceFilter):
 				"convertible": "rate",
 				"options": "currency",
 			},
-		
 			{
-				"label": _("Магазин"),
-				"fieldname": "stock_magazin",
+				"label": _("Reorder Level"),
+				"fieldname": "reorder_level",
 				"fieldtype": "Float",
-				"width": 100,
+				"width": 80,
 				"convertible": "qty",
 			},
 			{
-				"label": _("Склад А"),
-				"fieldname": "stock_a",
+				"label": _("Reorder Qty"),
+				"fieldname": "reorder_qty",
 				"fieldtype": "Float",
-				"width": 100,
+				"width": 80,
 				"convertible": "qty",
 			},
 			{
-				"label": _("Склад Б"),
-				"fieldname": "stock_b",
-				"fieldtype": "Float",
+				"label": _("Company"),
+				"fieldname": "company",
+				"fieldtype": "Link",
+				"options": "Company",
 				"width": 100,
-				"convertible": "qty",
 			},
-			{
-				"label": _("Лимит Сигнал"),
-				"fieldname": "limit_sign",
-				"fieldtype": "Int",
-				"width": 100,
-				"align": "center",
-			},
-			{
-				"label": _("Лимит"),
-				"fieldname": "limit",
-				"fieldtype": "HTML",
-				"width": 100,
-				"convertible": "qty",
-			},
-				
 		]
 	)
 
@@ -299,7 +310,7 @@ def get_stock_ledger_entries(filters: StockBalanceFilter, items: List[str]) -> L
 		frappe.qb.from_(sle)
 		.select(
 			sle.item_code,
-			
+			sle.warehouse,
 			sle.posting_date,
 			sle.actual_qty,
 			sle.valuation_rate,
@@ -335,24 +346,7 @@ def get_stock_ledger_entries(filters: StockBalanceFilter, items: List[str]) -> L
 def get_inventory_dimension_fields():
 	return [dimension.fieldname for dimension in get_inventory_dimensions()]
 
-def get_projected_qty(item_code, warehouse):
-    result = frappe.db.sql(
-    """
-    SELECT
-        item_code,
-        actual_qty
-       FROM `tabBin` where item_code = {0} and warehouse = '{1}' 
-    
-    """.format(
-            item_code, warehouse
-        ),
-    as_dict=True,
-)   
-    projected_qty = 0
-    if result:
-        projected_qty = result[0].actual_qty
 
-    return projected_qty   
 def get_item_warehouse_map(filters: StockBalanceFilter, sle: List[SLEntry]):
 	iwb_map = {}
 	from_date = getdate(filters.get("from_date"))
@@ -450,8 +444,7 @@ def filter_items_with_no_transactions(iwb_map, float_precision: float, inventory
 
 
 def get_items(filters: StockBalanceFilter) -> List[str]:
-	
-	"Get items based on item code, item group, brand, or supplier."
+	"Get items based on item code, item group or brand."
 	if item_code := filters.get("item_code"):
 		return [item_code]
 	else:
@@ -461,10 +454,7 @@ def get_items(filters: StockBalanceFilter) -> List[str]:
 			item_filters["item_group"] = ("in", children + [item_group])
 		if brand := filters.get("brand"):
 			item_filters["brand"] = brand
-		if supplier := filters.get("supplier"):
-			item_codes = frappe.get_all("Party Specific Item", filters={"party": supplier}, pluck="based_on_value")
-			item_filters["name"] = ("in", item_codes)
-		item_filters["disabled"] = ("=", "No")
+
 		return frappe.get_all("Item", filters=item_filters, pluck="name", order_by=None)
 
 
@@ -482,7 +472,6 @@ def get_item_details(items: List[str], sle: List[SLEntry], filters: StockBalance
 		frappe.qb.from_(item_table)
 		.select(
 			item_table.name,
-			item_table.limit,
 			item_table.item_name,
 			item_table.description,
 			item_table.item_group,
@@ -547,3 +536,45 @@ def get_variant_values_for(items):
 		attribute_map[attr["parent"]].update({attr["attribute"]: attr["attribute_value"]})
 
 	return attribute_map
+
+def get_highest_uom_conversions(items: List[str]) -> Dict[str, Dict[str, float]]:
+    """
+    Retrieve the UOM with the highest conversion factor for each item.
+    
+    :param items: List of item codes.
+    :return: Dictionary mapping item codes to their highest UOM and conversion factor.
+             Example: {"ITEM-001": {"uom": "Box", "conversion_factor": 10}, ...}
+    """
+    highest_uom_map = {}
+    if not items:
+        return highest_uom_map
+
+    uom_conv_detail = frappe.qb.DocType("UOM Conversion Detail")
+
+    query = (
+        frappe.qb.from_(uom_conv_detail)
+        .select(uom_conv_detail.parent, uom_conv_detail.uom, uom_conv_detail.conversion_factor)
+        .where((uom_conv_detail.parenttype == "Item") & (uom_conv_detail.parent.isin(items)  &
+            (uom_conv_detail.conversion_factor > 1)))
+    )
+
+    result = query.run(as_dict=1)
+
+    # Organize conversion factors per item
+    uom_map = {}
+    for row in result:
+        item_code = row["parent"]
+        uom = row["uom"]
+        factor = row["conversion_factor"]
+        if item_code not in uom_map:
+            uom_map[item_code] = []
+        uom_map[item_code].append((uom, factor))
+
+    # Determine the UOM with the highest conversion factor for each item
+    for item_code, uoms in uom_map.items():
+        # Sort UOMs by conversion factor descending
+        sorted_uoms = sorted(uoms, key=lambda x: x[1], reverse=True)
+        if sorted_uoms:
+            highest_uom_map[item_code] = {"uom": sorted_uoms[0][0], "conversion_factor": sorted_uoms[0][1]}
+
+    return highest_uom_map

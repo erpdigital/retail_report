@@ -108,7 +108,8 @@ def execute(filters=None):
                 ON `tabItem`.`item_code` = `Pr8`.`item_code` AND `Pr8`.`price_list` = 'Kemran optom'
         WHERE
             `tabItem`.`item_group` = '{0}'
-             AND `tabItem`.`stock_uom` = '{1}'            
+             AND `tabItem`.`stock_uom` = '{1}' 
+             and `tabItem`.`disabled` = 0           
         ORDER BY
             `tabItem`.`item_code`
     """.format(filters.get("item_group"),filters.get("uom")), as_dict=True)

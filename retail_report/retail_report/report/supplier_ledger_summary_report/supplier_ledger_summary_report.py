@@ -2,10 +2,19 @@
 # For license information, please see license.txt
 
 
+# Copyright (c) 2024, Frappe Technologies Pvt. Ltd. and contributors
+# For license information, please see license.txt
+
+# import frappe
+
+# Copyright (c) 2013, Frappe Technologies Pvt. Ltd. and contributors
+# For license information, please see license.txt
+
+
 import frappe
 from frappe import _, scrub
 from frappe.utils import getdate, nowdate
-from posawesome.posawesome.api.utils import get_sales_invoice_item_qty
+from posawesome.posawesome.api.utils import get_purchase_invoice_item_qty
 
 class PartyLedgerSummaryReport(object):
 	def __init__(self, filters=None):
@@ -40,36 +49,7 @@ class PartyLedgerSummaryReport(object):
 				"fieldtype": "Link",
 				"fieldname": "party",
 				"options": self.filters.party_type,
-				"width": 120,
-			},
-			{
-				"label": _("Customer Group"),
-				"fieldtype": "Link",
-				"fieldname": "customer_group",
-				"options": "Customer Group",
-				"hidden": 1,
-				"width": 100,
-			},
-			{
-				"label": _("Status"),
-				"fieldtype": "HTML",
-				"fieldname": "status",
-			
-				"width": 50,
-			},
-			{
-				"label": _("Color"),
-				"fieldtype": "Data",
-				"fieldname": "color",
-				"hidden": 1,
-				"width": 100,
-			},
-				{
-				"label": _("Credit Days"),
-				"fieldtype": "Data",
-				"fieldname": "credit_days",
-				
-				"width": 100,
+				"width": 200,
 			}
 		]
 
@@ -129,30 +109,6 @@ class PartyLedgerSummaryReport(object):
 			)
 
 		columns += [
-<<<<<<< HEAD
-
-			     {
-                                "label": _("Overdue Payments"),
-                                "fieldname": "advance_payments",
-                                "fieldtype": "Currency",
-                                "options": "currency",
-                                "width": 140,
-                        },
-			{
-				"label": _("Closing Balance"),
-				"fieldname": "closing_balance",
-=======
-				{
-				"label": _("Overdue Payments"),
-				"fieldname": "advance_payments",
->>>>>>> 8eee01f756fadf83a1276beab078e7fe510cf08f
-				"fieldtype": "Currency",
-				"options": "currency",
-				"width": 140,
-			},
-<<<<<<< HEAD
-			
-=======
 			{
 				"label": _("Closing Balance"),
 				"fieldname": "closing_balance",
@@ -160,13 +116,18 @@ class PartyLedgerSummaryReport(object):
 				"options": "currency",
 				"width": 120,
 			},
->>>>>>> 8eee01f756fadf83a1276beab078e7fe510cf08f
 			{
 				"label": _("Currency"),
 				"fieldname": "currency",
 				"fieldtype": "Link",
 				"options": "Currency",
 				"width": 50,
+			},
+		{
+				"label": _("Taro Credits"),
+				"fieldname": "taro_credits",
+				"fieldtype": "Int",
+				"width": 120,
 			},
 		]
 
@@ -178,30 +139,21 @@ class PartyLedgerSummaryReport(object):
 		)
 		invoice_dr_or_cr = "debit" if self.filters.party_type == "Customer" else "credit"
 		reverse_dr_or_cr = "credit" if self.filters.party_type == "Customer" else "debit"
-		
-		
+
 		self.party_data = frappe._dict({})
-		invoiced_amount_ = opening_balance_ = paid_amount_ = return_amount_ = closing_balance_ = 0.0
 		for gle in self.gl_entries:
-			
-		
 			self.party_data.setdefault(
 				gle.party,
 				frappe._dict(
 					{
 						"party": gle.party,
 						"party_name": gle.party_name,
-						"customer_group": '',
-						"credit_days":'',
-						"status":'1',
-						"color": '#FAFFFF',
 						"opening_balance": 0,
 						"invoiced_amount": 0,
 						"paid_amount": 0,
 						"return_amount": 0,
 						"closing_balance": 0,
-						"advance_payments": '',
-						"taro_credits": 0,
+						"taro_credits":0,
 						"currency": company_currency,
 					}
 				),
@@ -209,87 +161,18 @@ class PartyLedgerSummaryReport(object):
 
 			amount = gle.get(invoice_dr_or_cr) - gle.get(reverse_dr_or_cr)
 			self.party_data[gle.party].closing_balance += amount
-			closing_balance_ += self.party_data[gle.party].closing_balance
+
 			if gle.posting_date < self.filters.from_date or gle.is_opening == "Yes":
 				self.party_data[gle.party].opening_balance += amount
-				opening_balance_ += self.party_data[gle.party].opening_balance
 			else:
 				if amount > 0:
 					self.party_data[gle.party].invoiced_amount += amount
-					invoiced_amount_ += self.party_data[gle.party].invoiced_amount
 				elif gle.voucher_no in self.return_invoices:
 					self.party_data[gle.party].return_amount -= amount
-					return_amount_ += self.party_data[gle.party].return_amount
 				else:
 					self.party_data[gle.party].paid_amount -= amount
-					paid_amount_ += self.party_data[gle.party].paid_amount
 
-		all_customers = frappe.get_all('Customer', fields=['name','customer_name','customer_group','payment_terms'])
-		total_amount = frappe.db.sql("""
-        SELECT customer_name, SUM(outstanding_amount)
-        FROM `tabSales Invoice`
-        WHERE  status = %s and docstatus = 1 group by customer
-    """, ('Overdue'))	
-		result_total = {row[0]: row[1] for row in total_amount}
-		
-		# Step 2: For each customer, fetch their sales invoices
-		for customer in all_customers:
-			customer_group = customer.get('customer_group') 
-			customer = customer.get('name')
-			customer_name = customer.get('customer_name')
-			credit_days = customer.get('payment_terms')
-			overdue = frappe.db.get_value(
-    			'Sales Invoice',
-    			filters={'customer': customer,'customer_name': customer_name,  'status': 'Overdue'},
-    			fieldname='status',
-   			 order_by='due_date ASC')
-			if not overdue: 
-				Unpaid = frappe.db.get_value(
-    			'Sales Invoice',
-    			filters={'customer': customer,'customer_name': customer_name, 'status': 'Unpaid'},
-    			fieldname='status',
-   			 order_by='due_date ASC')
-			if not Unpaid:
-				partpaid = frappe.db.get_value(
-    			'Sales Invoice',
-    			filters={'customer': customer,'customer_name': customer_name, 'status': 'Partly Paid'},
-    			fieldname='status',
-   			 order_by='due_date ASC')
-			if not Unpaid:
-				paid =	frappe.db.get_value(
-    			'Sales Invoice',
-    			filters={'customer': customer,'customer_name': customer_name, 'status': 'Paid'},
-    			fieldname='status',
-   			 order_by='due_date ASC')
-			if overdue:
-				status = overdue
-			elif Unpaid:
-				status = Unpaid
-			elif partpaid:
-				status = partpaid	
-			else:
-				status = paid
-			color = '#FFFFFF'
-			get_color = frappe.db.sql(""" select color from `tabReport Settings Table` where status='{0}' """.format(status))
-			if get_color:
-				color = get_color[0][0]
-			# Get the current date
-			current_date = frappe.utils.today()	
-			
-			if customer in self.party_data:	
-				self.party_data[customer].status =f'<span class="span-Status" style="background-color:{color}">{status}</span>' 
-				self.party_data[customer].color = color	
-				self.party_data[customer].customer_group = customer_group
-				if customer in result_total:
-					self.party_data[customer].advance_payments = result_total[customer]
-				else:
-					self.party_data[customer].advance_payments = 0 
-				self.party_data[customer].credit_days = credit_days
 		out = []
-		overdue_list = []
-		unpaid_list = []
-		partial_list = []
-		paid_list = []
 		for party, row in self.party_data.items():
 			if (
 				row.opening_balance
@@ -302,21 +185,14 @@ class PartyLedgerSummaryReport(object):
 					amount for amount in self.party_adjustment_details.get(party, {}).values()
 				)
 				row.paid_amount -= total_party_adjustment
-
-				adjustments = self.party_adjustment_details.get(party, {})
 				"Addition Taro Credit"
-				#row.taro_credits = get_sales_invoice_item_qty(party,  self.filters.get("company"),'1003')
+				row.taro_credits = get_purchase_invoice_item_qty(party,  self.filters.get("company"),'1003')
+				adjustments = self.party_adjustment_details.get(party, {})
 				for account in self.party_adjustment_accounts:
 					row["adj_" + scrub(account)] = adjustments.get(account, 0)
-				if 'Overdue' in row['status'] :
-					overdue_list.append(row)
-				elif 'Unpaid' in row['status']:
-					unpaid_list.append(row)
-				elif  'Partly Paid' in row['status']:
-					partial_list.append(row)
-				elif  'Paid' in row['status']:
-					paid_list.append(row)
-		out = overdue_list + unpaid_list + partial_list + paid_list
+
+				out.append(row)
+
 		return out
 
 	def get_gl_entries(self):
@@ -508,7 +384,10 @@ class PartyLedgerSummaryReport(object):
 
 def execute(filters=None):
 	args = {
-		"party_type": "Customer",
-		"naming_by": ["Selling Settings", "cust_master_name"],
+		"party_type": "Supplier",
+		"naming_by": ["Buying Settings", "supp_master_name"],
 	}
 	return PartyLedgerSummaryReport(filters).run(args)
+
+
+
