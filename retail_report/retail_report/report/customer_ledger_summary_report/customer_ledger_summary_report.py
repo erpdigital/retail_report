@@ -210,7 +210,7 @@ class PartyLedgerSummaryReport(object):
 		total_amount = frappe.db.sql("""
         SELECT customer_name, SUM(outstanding_amount)
         FROM `tabSales Invoice`
-        WHERE  status = %s and docstatus = 1 group by customer_name
+        WHERE  status = %s and docstatus = 1 group by customer
     """, ('Overdue'))	
 		result_total = {row[0]: row[1] for row in total_amount}
 		
@@ -258,15 +258,15 @@ class PartyLedgerSummaryReport(object):
 			# Get the current date
 			current_date = frappe.utils.today()	
 			
-			if customer_name in self.party_data:	
-				self.party_data[customer_name].status =f'<span class="span-Status" style="background-color:{color}">{status}</span>' 
-				self.party_data[customer_name].color = color	
-				self.party_data[customer_name].customer_group = customer_group
-				if customer_name in result_total:
-					self.party_data[customer_name].advance_payments = result_total[customer_name]
+			if customer in self.party_data:	
+				self.party_data[customer].status =f'<span class="span-Status" style="background-color:{color}">{status}</span>' 
+				self.party_data[customer].color = color	
+				self.party_data[customer].customer_group = customer_group
+				if customer in result_total:
+					self.party_data[customer].advance_payments = result_total[customer]
 				else:
-					self.party_data[customer_name].advance_payments = 0 
-				self.party_data[customer_name].credit_days = credit_days
+					self.party_data[customer].advance_payments = 0 
+				self.party_data[customer].credit_days = credit_days
 		out = []
 		overdue_list = []
 		unpaid_list = []
