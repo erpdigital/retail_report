@@ -218,11 +218,11 @@ class PartyLedgerSummaryReport(object):
 		result_total = {row[0]: row[1] for row in total_amount}
 		
 		# Step 2: For each customer, fetch their sales invoices
-		for customer in all_customers:
-			customer_group = customer.get('customer_group') 
-			customer = customer.get('name')
+		for customer1 in all_customers:
+			customer_group = customer1.get('customer_group') 
+			customer = customer1.get('name')
 			#customer_name = customer.get('customer_name')
-			credit_days = customer.get('payment_terms')
+			credit_days = customer1.get('payment_terms')
 			overdue = frappe.db.get_value(
     			'Sales Invoice',
     			filters={'customer': customer,  'status': 'Overdue'},
