@@ -129,6 +129,14 @@ class PartyLedgerSummaryReport(object):
 			)
 
 		columns += [
+
+			     {
+                                "label": _("Overdue Payments"),
+                                "fieldname": "advance_payments",
+                                "fieldtype": "Currency",
+                                "options": "currency",
+                                "width": 140,
+                        },
 			{
 				"label": _("Closing Balance"),
 				"fieldname": "closing_balance",
@@ -136,13 +144,7 @@ class PartyLedgerSummaryReport(object):
 				"options": "currency",
 				"width": 120,
 			},
-			{
-				"label": _("Overdue Payments"),
-				"fieldname": "advance_payments",
-				"fieldtype": "Currency",
-				"options": "currency",
-				"width": 140,
-			},
+			
 			{
 				"label": _("Currency"),
 				"fieldname": "currency",

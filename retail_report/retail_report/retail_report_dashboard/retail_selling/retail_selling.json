@@ -13,7 +13,6 @@
    "card": "Active Customers"
   },
   {
-<<<<<<< HEAD
    "card": "\u0412\u0441\u0435\u0433\u043e \u0438\u0441\u0445\u043e\u0434\u044f\u0449\u0438\u0445 \u0441\u0447\u0435\u0442\u043e\u0432 \u0417\u0430 \u043d\u0435\u0434\u0435\u043b\u044e"
   },
   {
@@ -24,15 +23,12 @@
   },
   {
    "card": "Total Outgoing Paid Bills"
-=======
-   "card": "Total Outgoing Bills"
->>>>>>> a44877a3779140c779b9d26e910c5bdf5a3638d2
   }
  ],
  "charts": [
   {
    "chart": "Outgoing Bills (Sales Invoice)",
-   "width": "Half"
+   "width": "Full"
   },
   {
    "chart": "Customer Sales",
@@ -54,11 +50,7 @@
  "idx": 0,
  "is_default": 0,
  "is_standard": 1,
-<<<<<<< HEAD
- "modified": "2024-02-20 01:37:07.513538",
-=======
- "modified": "2024-02-20 01:07:47.293867",
->>>>>>> a44877a3779140c779b9d26e910c5bdf5a3638d2
+ "modified": "2024-09-15 15:42:14.343448",
  "modified_by": "Administrator",
  "module": "Retail Report",
  "name": "Retail Selling",
