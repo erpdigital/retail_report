@@ -211,7 +211,7 @@ class PartyLedgerSummaryReport(object):
 
 		all_customers = frappe.get_all('Customer', fields=['name','customer_name','customer_group','payment_terms'])
 		total_amount = frappe.db.sql("""
-        SELECT customer_name, SUM(outstanding_amount)
+        SELECT customer, SUM(outstanding_amount)
         FROM `tabSales Invoice`
         WHERE  status = %s and docstatus = 1 group by customer
     """, ('Overdue'))	
