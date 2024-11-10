@@ -70,7 +70,7 @@ class PartyLedgerSummaryReport(object):
 				"fieldname": "credit_days",
 				
 				"width": 100,
-			}
+			},
 		]
 
 		if self.party_naming_by == "Naming Series":
@@ -129,7 +129,7 @@ class PartyLedgerSummaryReport(object):
 			)
 
 		columns += [
-<<<<<<< HEAD
+
 
 			     {
                                 "label": _("Overdue Payments"),
@@ -137,22 +137,7 @@ class PartyLedgerSummaryReport(object):
                                 "fieldtype": "Currency",
                                 "options": "currency",
                                 "width": 140,
-                        },
-			{
-				"label": _("Closing Balance"),
-				"fieldname": "closing_balance",
-=======
-				{
-				"label": _("Overdue Payments"),
-				"fieldname": "advance_payments",
->>>>>>> 8eee01f756fadf83a1276beab078e7fe510cf08f
-				"fieldtype": "Currency",
-				"options": "currency",
-				"width": 140,
-			},
-<<<<<<< HEAD
-			
-=======
+                        },	
 			{
 				"label": _("Closing Balance"),
 				"fieldname": "closing_balance",
@@ -160,7 +145,7 @@ class PartyLedgerSummaryReport(object):
 				"options": "currency",
 				"width": 120,
 			},
->>>>>>> 8eee01f756fadf83a1276beab078e7fe510cf08f
+
 			{
 				"label": _("Currency"),
 				"fieldname": "currency",
