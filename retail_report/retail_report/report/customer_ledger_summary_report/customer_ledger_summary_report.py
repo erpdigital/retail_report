@@ -221,29 +221,29 @@ class PartyLedgerSummaryReport(object):
 		for customer in all_customers:
 			customer_group = customer.get('customer_group') 
 			customer = customer.get('name')
-			customer_name = customer.get('customer_name')
+			#customer_name = customer.get('customer_name')
 			credit_days = customer.get('payment_terms')
 			overdue = frappe.db.get_value(
     			'Sales Invoice',
-    			filters={'customer': customer,'customer_name': customer_name,  'status': 'Overdue'},
+    			filters={'customer': customer,  'status': 'Overdue'},
     			fieldname='status',
    			 order_by='due_date ASC')
 			if not overdue: 
 				Unpaid = frappe.db.get_value(
     			'Sales Invoice',
-    			filters={'customer': customer,'customer_name': customer_name, 'status': 'Unpaid'},
+    			filters={'customer': customer, 'status': 'Unpaid'},
     			fieldname='status',
    			 order_by='due_date ASC')
 			if not Unpaid:
 				partpaid = frappe.db.get_value(
     			'Sales Invoice',
-    			filters={'customer': customer,'customer_name': customer_name, 'status': 'Partly Paid'},
+    			filters={'customer': customer, 'status': 'Partly Paid'},
     			fieldname='status',
    			 order_by='due_date ASC')
 			if not Unpaid:
 				paid =	frappe.db.get_value(
     			'Sales Invoice',
-    			filters={'customer': customer,'customer_name': customer_name, 'status': 'Paid'},
+    			filters={'customer': customer, 'status': 'Paid'},
     			fieldname='status',
    			 order_by='due_date ASC')
 			if overdue:
