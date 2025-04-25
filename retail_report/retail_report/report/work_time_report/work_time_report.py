@@ -22,7 +22,7 @@ def execute(filters=None):
 
     columns = [
         {"label": "Employee ID", "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
-        {"label": "Employee Name", "fieldname": "employee_name", "fieldtype": "Data", "width": 150},
+        {"label": "Employee Name", "fieldname": "employee_name", "fieldtype": "Data", "width": 150}
     ] + [
         {"label": d.strftime('%a %d-%m'), "fieldname": d.strftime('%Y_%m_%d'), "fieldtype": "HTML", "width": 100}
         for d in dates
@@ -39,6 +39,7 @@ def execute(filters=None):
 
 
 def get_attendance_status(emp, date):
+    # Fetch check-in and check-out
     checkin = frappe.db.get_value("Employee Checkin", {
         "employee": emp.name,
         "log_type": "IN",
@@ -51,18 +52,17 @@ def get_attendance_status(emp, date):
         "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
     }, "time")
 
-    # Shift and grace period handling
+    # Shift start and grace
     shift_start_time = None
     grace = 0
     if emp.default_shift:
         shift = frappe.get_doc("Shift Type", emp.default_shift)
         if shift.start_time:
             if isinstance(shift.start_time, timedelta):
-                total_seconds = int(shift.start_time.total_seconds())
-                hours = total_seconds // 3600
-                minutes = (total_seconds % 3600) // 60
-                seconds = total_seconds % 60
-                shift_start_time = time(hours, minutes, seconds)
+                secs = int(shift.start_time.total_seconds())
+                h, m = divmod(secs, 3600)
+                m, s = divmod(m, 60)
+                shift_start_time = time(h, m, s)
             else:
                 shift_start_time = shift.start_time
             grace = shift.late_entry_grace_period or 0
@@ -70,7 +70,9 @@ def get_attendance_status(emp, date):
     shift_start = datetime.combine(date, shift_start_time) if shift_start_time else None
 
     # Holiday and leave checks
-    is_holiday = emp.holiday_list and frappe.db.exists("Holiday", {"holiday_date": date, "parent": emp.holiday_list})
+    is_holiday = emp.holiday_list and frappe.db.exists(
+        "Holiday", {"holiday_date": date, "parent": emp.holiday_list}
+    )
     is_on_leave = frappe.db.exists("Leave Application", {
         "employee": emp.name,
         "from_date": ["<=", date],
@@ -79,22 +81,23 @@ def get_attendance_status(emp, date):
         "docstatus": 1
     })
 
-    # Priority: Holiday > Leave > Absent > Attendance
+    # 1. If there's any checkin or checkout, show attendance ignoring holiday
+    if checkin or checkout:
+        # Format times
+        checkin_str = checkin.strftime('%H:%M') if isinstance(checkin, datetime) else '-'
+        checkout_str = checkout.strftime('%H:%M') if isinstance(checkout, datetime) else '-'
+        # Late check-in
+        if shift_start and checkin:
+            checkin_dt = checkin if isinstance(checkin, datetime) else datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
+            if checkin_dt > shift_start + timedelta(minutes=grace):
+                checkin_str = f'<span style="color:red">{checkin_str}</span>'
+        return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>'
+
+    # 2. Holiday (no checkin) -> green
     if is_holiday:
         return '<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">Holiday</div>'
+    # 3. Approved leave -> yellow
     if is_on_leave:
         return '<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">Leave</div>'
-    if not checkin and not checkout:
-        return '<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">Absent</div>'
-
-    # Format checkin/checkout
-    checkin_str = checkin.strftime('%H:%M') if isinstance(checkin, datetime) else '-'
-    checkout_str = checkout.strftime('%H:%M') if isinstance(checkout, datetime) else '-'
-
-    # Late check-in styling
-    if shift_start and checkin:
-        actual = checkin if isinstance(checkin, datetime) else datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
-        if actual > shift_start + timedelta(minutes=grace):
-            checkin_str = f'<span style="color:red">{checkin_str}</span>'
-
-    return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>'
+    # 4. Absent -> black
+    return '<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">Absent</div>'
