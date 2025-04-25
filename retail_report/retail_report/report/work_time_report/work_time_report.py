@@ -1,4 +1,5 @@
-from frappe import _ 
+from frappe import _  # Add this import to make __() available
+
 import frappe
 from datetime import datetime, timedelta, time
 
@@ -19,15 +20,15 @@ def execute(filters=None):
         current += timedelta(days=1)
 
     columns = [
-        {"label": __("Employee ID"), "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
-        {"label": __("Employee Name"), "fieldname": "employee_name", "fieldtype": "Data", "width": 150}
+        {"label": _("Employee ID"), "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
+        {"label": _("Employee Name"), "fieldname": "employee_name", "fieldtype": "Data", "width": 150}
     ] + [
         {"label": d.strftime('%a %d-%m'), "fieldname": d.strftime('%Y_%m_%d'), "fieldtype": "HTML", "width": 100}
         for d in dates
     ] + [
-        {"label": __("Total Holidays"), "fieldname": "total_holidays", "fieldtype": "Int", "width": 120},
-        {"label": __("Total Leaves"), "fieldname": "total_leaves", "fieldtype": "Int", "width": 120},
-        {"label": __("Total Absences"), "fieldname": "total_absences", "fieldtype": "Int", "width": 120}
+        {"label": _("Total Holidays"), "fieldname": "total_holidays", "fieldtype": "Int", "width": 120},
+        {"label": _("Total Leaves"), "fieldname": "total_leaves", "fieldtype": "Int", "width": 120},
+        {"label": _("Total Absences"), "fieldname": "total_absences", "fieldtype": "Int", "width": 120}
     ]
 
     data = []
@@ -110,9 +111,31 @@ def get_attendance_status(emp, date):
 
     # 2. Holiday (no checkin) -> green
     if is_holiday:
-        return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">{__("Holiday")}</div>'
+        return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">{_("Holiday")}</div>'
     # 3. Approved leave -> yellow
     if is_on_leave:
-        return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">{__("Leave")}</div>'
+        return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">{_("Leave")}</div>'
     # 4. Absent -> black
-    return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{__("Absent")}</div>'
+    return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{_("Absent")}</div>'
+
+
+# File: work_time_report.js
+
+frappe.query_reports["Weekly Attendance Overview"] = {
+    filters: [
+        {
+            fieldname: "from_date",
+            label: _("From Date"),
+            fieldtype: "Date",
+            default: frappe.datetime.add_days(frappe.datetime.get_today(), -7),
+            reqd: 1
+        },
+        {
+            fieldname: "to_date",
+            label: _("To Date"),
+            fieldtype: "Date",
+            default: frappe.datetime.get_today(),
+            reqd: 1
+        }
+    ]
+};
