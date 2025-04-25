@@ -1,5 +1,3 @@
-# File: weekly_attendance_overview.py
-
 import frappe
 from datetime import datetime, timedelta
 
@@ -9,12 +7,14 @@ def execute(filters=None):
 
     employees = frappe.get_all("Employee", filters={"status": "Active"}, fields=["name", "employee_name", "holiday_list", "default_shift"])
 
+    # Get all dates between range
     dates = []
     current = from_date
     while current <= to_date:
         dates.append(current)
         current += timedelta(days=1)
 
+    # Report columns
     columns = [
         {"label": "Employee ID", "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
         {"label": "Employee Name", "fieldname": "employee_name", "fieldtype": "Data", "width": 150}
@@ -29,14 +29,15 @@ def execute(filters=None):
         }
 
         for date in dates:
-            status_html = get_attendance_status(emp, date)
-            row[date.strftime('%Y_%m_%d')] = status_html
+            row[date.strftime('%Y_%m_%d')] = get_attendance_status(emp, date)
 
         data.append(row)
 
     return columns, data
 
+
 def get_attendance_status(emp, date):
+    # Check-ins
     checkin = frappe.db.get_value("Employee Checkin", {
         "employee": emp.name,
         "log_type": "IN",
@@ -49,13 +50,22 @@ def get_attendance_status(emp, date):
         "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
     }, "time")
 
-    shift = frappe.get_doc("Shift Type", emp.default_shift) if emp.default_shift else None
-    shift_start = datetime.combine(date, shift.start_time) if shift and shift.start_time else None
-    grace = shift.late_entry_grace_period if shift else 0
+    # Shift & grace
+    shift_start = None
+    grace = 0
+    if emp.default_shift:
+        shift = frappe.get_doc("Shift Type", emp.default_shift)
+        if shift.start_time:
+            shift_start = datetime.combine(date, shift.start_time)
+            grace = shift.late_entry_grace_period or 0
 
-    holiday = frappe.db.exists("Holiday", {"holiday_date": date, "parent": emp.holiday_list}) if emp.holiday_list else None
+    # Holiday check
+    is_holiday = False
+    if emp.holiday_list:
+        is_holiday = frappe.db.exists("Holiday", {"holiday_date": date, "parent": emp.holiday_list})
 
-    on_leave = frappe.db.exists("Leave Application", {
+    # Leave check
+    is_on_leave = frappe.db.exists("Leave Application", {
         "employee": emp.name,
         "from_date": ["<=", date],
         "to_date": [">=", date],
@@ -63,20 +73,22 @@ def get_attendance_status(emp, date):
         "docstatus": 1
     })
 
-    if holiday:
-        return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">Holiday</div>'
-    elif on_leave:
-        return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">Leave</div>'
+    # Logic + styling
+    if is_holiday:
+        return '<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">Holiday</div>'
+    elif is_on_leave:
+        return '<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">Leave</div>'
     elif not checkin and not checkout:
-        return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">Absent</div>'
+        return '<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">Absent</div>'
     else:
         checkin_str = datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S").strftime('%H:%M') if checkin else "-"
         checkout_str = datetime.strptime(checkout, "%Y-%m-%d %H:%M:%S").strftime('%H:%M') if checkout else "-"
 
-        if shift_start and checkin:
-            shift_grace = shift_start + timedelta(minutes=grace)
-            checkin_dt = datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
-            if checkin_dt > shift_grace:
+        # Late check
+        if checkin and shift_start:
+            actual_checkin = datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
+            latest_allowed = shift_start + timedelta(minutes=grace)
+            if actual_checkin > latest_allowed:
                 checkin_str = f'<span style="color:red">{checkin_str}</span>'
 
         return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>'
