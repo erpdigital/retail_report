@@ -75,3 +75,22 @@ def get_attendance_status(emp, date):
         "to_date": [">=", date],
         "status": "Approved",
         "docstatus": 1
+    })
+
+    if holiday:
+        return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">Holiday</div>'
+    elif on_leave:
+        return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">Leave</div>'
+    elif not checkin and not checkout:
+        return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">Absent</div>'
+    else:
+        checkin_str = datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S").strftime('%H:%M') if checkin else "-"
+        checkout_str = datetime.strptime(checkout, "%Y-%m-%d %H:%M:%S").strftime('%H:%M') if checkout else "-"
+
+        if shift_start and checkin:
+            shift_grace = shift_start + timedelta(minutes=grace)
+            checkin_dt = datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
+            if checkin_dt > shift_grace:
+                checkin_str = f'<span style="color:red">{checkin_str}</span>'
+
+        return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>'
