@@ -119,23 +119,3 @@ def get_attendance_status(emp, date):
     return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{_("Absent")}</div>'
 
 
-# File: work_time_report.js
-
-frappe.query_reports["Weekly Attendance Overview"] = {
-    filters: [
-        {
-            fieldname: "from_date",
-            label: _("From Date"),
-            fieldtype: "Date",
-            default: frappe.datetime.add_days(frappe.datetime.get_today(), -7),
-            reqd: 1
-        },
-        {
-            fieldname: "to_date",
-            label: _("To Date"),
-            fieldtype: "Date",
-            default: frappe.datetime.get_today(),
-            reqd: 1
-        }
-    ]
-};
