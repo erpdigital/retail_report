@@ -1,7 +1,7 @@
-#weekly_attendance_overview.py
+# File: work_time_report.py
 
 import frappe
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
 def execute(filters=None):
     from_date = datetime.strptime(filters.get("from_date"), "%Y-%m-%d").date()
@@ -50,7 +50,21 @@ def get_attendance_status(emp, date):
     }, "time")
 
     shift = frappe.get_doc("Shift Type", emp.default_shift) if emp.default_shift else None
-    shift_start = datetime.combine(date, shift.start_time) if shift and shift.start_time else None
+    shift_start_time = None
+
+    if shift and shift.start_time:
+        if isinstance(shift.start_time, timedelta):
+            # Convert timedelta to datetime.time
+            total_seconds = int(shift.start_time.total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            shift_start_time = time(hours, minutes, seconds)
+        else:
+            shift_start_time = shift.start_time  # Assuming it's already a time object
+
+    shift_start = datetime.combine(date, shift_start_time) if shift_start_time else None
+
     grace = shift.late_entry_grace_period if shift else 0
 
     holiday = frappe.db.exists("Holiday", {"holiday_date": date, "parent": emp.holiday_list}) if emp.holiday_list else None
@@ -61,22 +75,3 @@ def get_attendance_status(emp, date):
         "to_date": [">=", date],
         "status": "Approved",
         "docstatus": 1
-    })
-
-    if holiday:
-        return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">Holiday</div>'
-    elif on_leave:
-        return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">Leave</div>'
-    elif not checkin and not checkout:
-        return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">Absent</div>'
-    else:
-        checkin_str = datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S").strftime('%H:%M') if checkin else "-"
-        checkout_str = datetime.strptime(checkout, "%Y-%m-%d %H:%M:%S").strftime('%H:%M') if checkout else "-"
-
-        if shift_start and checkin:
-            shift_grace = shift_start + timedelta(minutes=grace)
-            checkin_dt = datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
-            if checkin_dt > shift_grace:
-                checkin_str = f'<span style="color:red">{checkin_str}</span>'
-
-        return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>'
