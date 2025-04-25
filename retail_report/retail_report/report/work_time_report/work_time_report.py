@@ -1,8 +1,5 @@
-# File: work_time_report.py
-
 import frappe
 from datetime import datetime, timedelta, time
-
 
 def execute(filters=None):
     from_date = datetime.strptime(filters.get("from_date"), "%Y-%m-%d").date()
@@ -101,25 +98,3 @@ def get_attendance_status(emp, date):
         return '<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">Leave</div>'
     # 4. Absent -> black
     return '<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">Absent</div>'
-
-
-# File: work_time_report.js
-
-frappe.query_reports["Weekly Attendance Overview"] = {
-    filters: [
-        {
-            fieldname: "from_date",
-            label: __("From Date"),
-            fieldtype: "Date",
-            default: frappe.datetime.add_days(frappe.datetime.get_today(), -7),
-            reqd: 1
-        },
-        {
-            fieldname: "to_date",
-            label: __("To Date"),
-            fieldtype: "Date",
-            default: frappe.datetime.get_today(),
-            reqd: 1
-        }
-    ]
-};
