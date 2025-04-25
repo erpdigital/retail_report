@@ -18,15 +18,15 @@ def execute(filters=None):
         current += timedelta(days=1)
 
     columns = [
-        {"label": "Employee ID", "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
-        {"label": "Employee Name", "fieldname": "employee_name", "fieldtype": "Data", "width": 150}
+        {"label": __("Employee ID"), "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
+        {"label": __("Employee Name"), "fieldname": "employee_name", "fieldtype": "Data", "width": 150}
     ] + [
         {"label": d.strftime('%a %d-%m'), "fieldname": d.strftime('%Y_%m_%d'), "fieldtype": "HTML", "width": 100}
         for d in dates
     ] + [
-        {"label": "Total Holidays", "fieldname": "total_holidays", "fieldtype": "Int", "width": 120},
-        {"label": "Total Leaves", "fieldname": "total_leaves", "fieldtype": "Int", "width": 120},
-        {"label": "Total Absences", "fieldname": "total_absences", "fieldtype": "Int", "width": 120}
+        {"label": __("Total Holidays"), "fieldname": "total_holidays", "fieldtype": "Int", "width": 120},
+        {"label": __("Total Leaves"), "fieldname": "total_leaves", "fieldtype": "Int", "width": 120},
+        {"label": __("Total Absences"), "fieldname": "total_absences", "fieldtype": "Int", "width": 120}
     ]
 
     data = []
@@ -109,9 +109,9 @@ def get_attendance_status(emp, date):
 
     # 2. Holiday (no checkin) -> green
     if is_holiday:
-        return '<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">Holiday</div>'
+        return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">{__("Holiday")}</div>'
     # 3. Approved leave -> yellow
     if is_on_leave:
-        return '<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">Leave</div>'
+        return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">{__("Leave")}</div>'
     # 4. Absent -> black
-    return '<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">Absent</div>'
+    return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{__("Absent")}</div>'
