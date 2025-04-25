@@ -23,13 +23,30 @@ def execute(filters=None):
     ] + [
         {"label": d.strftime('%a %d-%m'), "fieldname": d.strftime('%Y_%m_%d'), "fieldtype": "HTML", "width": 100}
         for d in dates
+    ] + [
+        {"label": "Total Holidays", "fieldname": "total_holidays", "fieldtype": "Int", "width": 120},
+        {"label": "Total Leaves", "fieldname": "total_leaves", "fieldtype": "Int", "width": 120},
+        {"label": "Total Absences", "fieldname": "total_absences", "fieldtype": "Int", "width": 120}
     ]
 
     data = []
     for emp in employees:
         row = {"employee": emp.name, "employee_name": emp.employee_name}
+        total_holidays = 0
+        total_leaves = 0
+        total_absences = 0
         for date in dates:
-            row[date.strftime('%Y_%m_%d')] = get_attendance_status(emp, date)
+            status = get_attendance_status(emp, date)
+            row[date.strftime('%Y_%m_%d')] = status
+            if 'Holiday' in status:
+                total_holidays += 1
+            elif 'Leave' in status:
+                total_leaves += 1
+            elif 'Absent' in status:
+                total_absences += 1
+        row["total_holidays"] = total_holidays
+        row["total_leaves"] = total_leaves
+        row["total_absences"] = total_absences
         data.append(row)
 
     return columns, data
