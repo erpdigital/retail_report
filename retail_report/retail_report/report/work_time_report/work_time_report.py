@@ -1,101 +1,125 @@
+# File: work_time_report.py
+
 import frappe
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
+
+
+def execute(filters=None):
+    from_date = datetime.strptime(filters.get("from_date"), "%Y-%m-%d").date()
+    to_date = datetime.strptime(filters.get("to_date"), "%Y-%m-%d").date()
+
+    employees = frappe.get_all(
+        "Employee",
+        filters={"status": "Active"},
+        fields=["name", "employee_name", "holiday_list", "default_shift"]
+    )
+
+    dates = []
+    current = from_date
+    while current <= to_date:
+        dates.append(current)
+        current += timedelta(days=1)
+
+    columns = [
+        {"label": "Employee ID", "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
+        {"label": "Employee Name", "fieldname": "employee_name", "fieldtype": "Data", "width": 150}
+    ] + [
+        {"label": d.strftime('%a %d-%m'), "fieldname": d.strftime('%Y_%m_%d'), "fieldtype": "HTML", "width": 100}
+        for d in dates
+    ]
+
+    data = []
+    for emp in employees:
+        row = {"employee": emp.name, "employee_name": emp.employee_name}
+        for date in dates:
+            row[date.strftime('%Y_%m_%d')] = get_attendance_status(emp, date)
+        data.append(row)
+
+    return columns, data
+
 
 def get_attendance_status(emp, date):
-    # Check if the employee has a holiday or leave
-    on_leave = frappe.db.exists("Leave Application", {
-        "employee": emp,
+    # Fetch check-in and check-out
+    checkin = frappe.db.get_value("Employee Checkin", {
+        "employee": emp.name,
+        "log_type": "IN",
+        "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
+    }, "time")
+
+    checkout = frappe.db.get_value("Employee Checkin", {
+        "employee": emp.name,
+        "log_type": "OUT",
+        "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
+    }, "time")
+
+    # Shift start and grace
+    shift_start_time = None
+    grace = 0
+    if emp.default_shift:
+        shift = frappe.get_doc("Shift Type", emp.default_shift)
+        if shift.start_time:
+            if isinstance(shift.start_time, timedelta):
+                secs = int(shift.start_time.total_seconds())
+                h, m = divmod(secs, 3600)
+                m, s = divmod(m, 60)
+                shift_start_time = time(h, m, s)
+            else:
+                shift_start_time = shift.start_time
+            grace = shift.late_entry_grace_period or 0
+
+    shift_start = datetime.combine(date, shift_start_time) if shift_start_time else None
+
+    # Holiday and leave checks
+    is_holiday = emp.holiday_list and frappe.db.exists(
+        "Holiday", {"holiday_date": date, "parent": emp.holiday_list}
+    )
+    is_on_leave = frappe.db.exists("Leave Application", {
+        "employee": emp.name,
         "from_date": ["<=", date],
         "to_date": [">=", date],
-        "status": "Approved"
+        "status": "Approved",
+        "docstatus": 1
     })
 
-    on_holiday = frappe.db.exists("Holiday", {
-        "holiday_date": date
-    })
+    # 1. If there's any checkin or checkout, show attendance ignoring holiday
+    if checkin or checkout:
+        # Format times
+        checkin_str = checkin.strftime('%H:%M') if isinstance(checkin, datetime) else '-'
+        checkout_str = checkout.strftime('%H:%M') if isinstance(checkout, datetime) else '-'
+        # Late check-in
+        if shift_start and checkin:
+            checkin_dt = checkin if isinstance(checkin, datetime) else datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
+            if checkin_dt > shift_start + timedelta(minutes=grace):
+                checkin_str = f'<span style="color:red">{checkin_str}</span>'
+        return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>'
 
-    # Get the shift information
-    shift = frappe.get_all("Shift", filters={"employee": emp}, fields=["start_time", "end_time"])
-
-    # Default status
-    status = "Absent"  # Default status is absent
-
-    if on_leave:
-        status = "Leave"
-    elif on_holiday:
-        status = "Holiday"
-    elif shift:
-        shift_start = datetime.combine(date, shift[0].start_time) if shift[0].start_time else None
-        shift_end = datetime.combine(date, shift[0].end_time) if shift[0].end_time else None
-        attendance = frappe.get_all("Attendance", filters={
-            "employee": emp,
-            "attendance_date": date
-        })
-
-        if attendance:
-            checkin_time = datetime.strptime(attendance[0].checkin, "%Y-%m-%d %H:%M:%S") if attendance[0].checkin else None
-            if checkin_time:
-                # If check-in time is later than the shift start time, it's late
-                if checkin_time > shift_start:
-                    status = "Late"
-                else:
-                    status = "On Time"
-            else:
-                status = "Absent"
-        else:
-            status = "Absent"
-
-    return status, shift_start, shift_end
+    # 2. Holiday (no checkin) -> green
+    if is_holiday:
+        return '<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">Holiday</div>'
+    # 3. Approved leave -> yellow
+    if is_on_leave:
+        return '<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">Leave</div>'
+    # 4. Absent -> black
+    return '<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">Absent</div>'
 
 
-def execute(filters):
-    employees = frappe.get_all("Employee", fields=["name", "employee_name", "department", "designation"])
-    results = []
+# File: work_time_report.js
 
-    worked_days = 0
-    absent_days = 0
-    late_days = 0
-
-    for emp in employees:
-        row = {
-            "employee_name": emp.employee_name,
-            "employee_id": emp.name,
-            "worked_days": 0,
-            "absent_days": 0,
-            "late_days": 0,
-            "attendance": []
+frappe.query_reports["Weekly Attendance Overview"] = {
+    filters: [
+        {
+            fieldname: "from_date",
+            label: __("From Date"),
+            fieldtype: "Date",
+            default: frappe.datetime.add_days(frappe.datetime.get_today(), -7),
+            reqd: 1
+        },
+        {
+            fieldname: "to_date",
+            label: __("To Date"),
+            fieldtype: "Date",
+            default: frappe.datetime.get_today(),
+            reqd: 1
         }
-
-        for date in filters["date_range"]:
-            status, shift_start, shift_end = get_attendance_status(emp.name, date)
-
-            row["attendance"].append(status)
-
-            if status == "On Time" or status == "Late":
-                row["worked_days"] += 1
-                worked_days += 1
-
-            if status == "Absent":
-                row["absent_days"] += 1
-                absent_days += 1
-
-            if status == "Late":
-                row["late_days"] += 1
-                late_days += 1
-
-        # Append the worked_days, absent_days, and late_days for each employee
-        results.append(row)
-
-    # Add the total summary row with worked, absent, and late days
-    summary_row = {
-        "employee_name": "Total",
-        "worked_days": worked_days,
-        "absent_days": absent_days,
-        "late_days": late_days,
-        "attendance": []
-    }
-
-    results.append(summary_row)
-
-    # Returning the results with the added summary columns
-    return results
+    ]
+};
