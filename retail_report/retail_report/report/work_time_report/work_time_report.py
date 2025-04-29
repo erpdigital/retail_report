@@ -55,18 +55,31 @@ def execute(filters=None):
 
 
 def get_attendance_status(emp, date):
-    # Fetch check-in and check-out
-    checkin = frappe.db.get_value("Employee Checkin", {
-        "employee": emp.name,
-        "log_type": "IN",
-        "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
-    }, "time")
+    # Get first check-in
+    checkins = frappe.get_all("Employee Checkin",
+        filters={
+            "employee": emp.name,
+            "log_type": "IN",
+            "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
+        },
+        fields=["time"],
+        order_by="time asc",
+        limit=1
+    )
+    checkin = checkins[0].time if checkins else None
 
-    checkout = frappe.db.get_value("Employee Checkin", {
-        "employee": emp.name,
-        "log_type": "OUT",
-        "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
-    }, "time")
+    # Get last check-out
+    checkouts = frappe.get_all("Employee Checkin",
+        filters={
+            "employee": emp.name,
+            "log_type": "OUT",
+            "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
+        },
+        fields=["time"],
+        order_by="time desc",
+        limit=1
+    )
+    checkout = checkouts[0].time if checkouts else None
 
     # Shift start and grace
     shift_start_time = None
@@ -97,25 +110,20 @@ def get_attendance_status(emp, date):
         "docstatus": 1
     })
 
-    # 1. If there's any checkin or checkout, show attendance ignoring holiday
     if checkin or checkout:
-        # Format times
         checkin_str = checkin.strftime('%H:%M') if isinstance(checkin, datetime) else '-'
         checkout_str = checkout.strftime('%H:%M') if isinstance(checkout, datetime) else '-'
-        # Late check-in
+
         if shift_start and checkin:
             checkin_dt = checkin if isinstance(checkin, datetime) else datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
             if checkin_dt > shift_start + timedelta(minutes=grace):
                 checkin_str = f'<span style="color:red">{checkin_str}</span>'
+
         return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>'
 
-    # 2. Holiday (no checkin) -> green
     if is_holiday:
         return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">{_("Holiday")}</div>'
-    # 3. Approved leave -> yellow
     if is_on_leave:
         return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">{_("Leave")}</div>'
-    # 4. Absent -> black
     return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{_("Absent")}</div>'
-
 
