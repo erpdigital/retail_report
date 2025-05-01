@@ -124,7 +124,9 @@ def get_attendance_status(emp, date):
             checkin_dt = checkin if isinstance(checkin, datetime) else datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
             if checkin_dt > shift_start + timedelta(minutes=grace):
                 checkin_str = f'<span style="color:red">{checkin_str}</span>'
-                late_entry_minutes = (checkin_dt - shift_start).seconds // 60
+                late_entry_minutes = (checkin_dt - shift_start-timedelta(minutes=grace)).seconds // 60
+                if late_entry_minutes < 0:
+                    late_entry_minutes = 0
         return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>', late_entry_minutes
 
     # 2. Holiday (no checkin) -> green
