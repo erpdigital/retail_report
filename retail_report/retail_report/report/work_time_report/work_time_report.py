@@ -20,19 +20,19 @@ def execute(filters=None):
         current += timedelta(days=1)
 
     columns = [
-        {"label": _("Employee ID"), "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
-        {"label": _("Employee Name"), "fieldname": "employee_name", "fieldtype": "Data", "width": 150}
-    ] + [
-        {"label": d.strftime('%a %d-%m'), "fieldname": d.strftime('%Y_%m_%d'), "fieldtype": "HTML", "width": 100}
-        for d in dates
-    ] + [
-        {"label": _("Total Holidays"), "fieldname": "total_holidays", "fieldtype": "Int", "width": 120},
-        {"label": _("Total Leaves"), "fieldname": "total_leaves", "fieldtype": "Int", "width": 120},
-        {"label": _("Total Absences"), "fieldname": "total_absences", "fieldtype": "Int", "width": 120},
-        {"label": _("Sum of Late Entry Days"), "fieldname": "total_late_entry_days", "fieldtype": "Int", "width": 160},
-        {"label": _("Sum of Minutes of Late Entry"), "fieldname": "total_late_entry_minutes", "fieldtype": "Int", "width": 160},
-        {"label": _("Total Workdays"), "fieldname": "total_workdays", "fieldtype": "Int", "width": 120}
-    ]
+    {"label": _("ID сотрудника"), "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
+    {"label": _("Имя сотрудника"), "fieldname": "employee_name", "fieldtype": "Data", "width": 150}
+] + [
+    {"label": d.strftime('%a %d-%m'), "fieldname": d.strftime('%Y_%m_%d'), "fieldtype": "HTML", "width": 100}
+    for d in dates
+] + [
+    {"label": _("Всего праздников"), "fieldname": "total_holidays", "fieldtype": "Int", "width": 120},
+    {"label": _("Всего отпусков"), "fieldname": "total_leaves", "fieldtype": "Int", "width": 120},
+    {"label": _("Всего отсутствий"), "fieldname": "total_absences", "fieldtype": "Int", "width": 120},
+    {"label": _("Количество дней с опозданием"), "fieldname": "total_late_entry_days", "fieldtype": "Int", "width": 160},
+    {"label": _("Общее количество минут опоздания"), "fieldname": "total_late_entry_minutes", "fieldtype": "Int", "width": 160},
+    {"label": _("Общее количество рабочих дней"), "fieldname": "total_workdays", "fieldtype": "Int", "width": 120}
+]
 
     data = []
     for emp in employees:
