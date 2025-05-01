@@ -56,17 +56,21 @@ def execute(filters=None):
 
 def get_attendance_status(emp, date):
     # Fetch check-in and check-out
-    checkin = frappe.db.get_value("Employee Checkin", {
-        "employee": emp.name,
-        "log_type": "IN",
-        "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
-    }, "time")
+    checkin = frappe.db.sql("""
+        SELECT time FROM `tabEmployee Checkin`
+        WHERE employee = %s AND log_type = 'IN' AND time BETWEEN %s AND %s
+        ORDER BY time ASC LIMIT 1
+    """, (emp.name, f"{date} 00:00:00", f"{date} 23:59:59"), as_dict=1)
 
-    checkout = frappe.db.get_value("Employee Checkin", {
-        "employee": emp.name,
-        "log_type": "OUT",
-        "time": ["between", [f"{date} 00:00:00", f"{date} 23:59:59"]]
-    }, "time")
+    # Get last check-out
+    checkout = frappe.db.sql("""
+        SELECT time FROM `tabEmployee Checkin`
+        WHERE employee = %s AND log_type = 'OUT' AND time BETWEEN %s AND %s
+        ORDER BY time DESC LIMIT 1
+    """, (emp.name, f"{date} 00:00:00", f"{date} 23:59:59"), as_dict=1)
+
+    checkin_time = checkin[0].time if checkin else None
+    checkout_time = checkout[0].time if checkout else None
 
     # Shift start and grace
     shift_start_time = None
