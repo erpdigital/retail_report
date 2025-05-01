@@ -30,7 +30,8 @@ def execute(filters=None):
         {"label": _("Total Leaves"), "fieldname": "total_leaves", "fieldtype": "Int", "width": 120},
         {"label": _("Total Absences"), "fieldname": "total_absences", "fieldtype": "Int", "width": 120},
         {"label": _("Sum of Late Entry Days"), "fieldname": "total_late_entry_days", "fieldtype": "Int", "width": 160},
-        {"label": _("Sum of Minutes of Late Entry"), "fieldname": "total_late_entry_minutes", "fieldtype": "Int", "width": 160}
+        {"label": _("Sum of Minutes of Late Entry"), "fieldname": "total_late_entry_minutes", "fieldtype": "Int", "width": 160},
+        {"label": _("Total Workdays"), "fieldname": "total_workdays", "fieldtype": "Int", "width": 120}
     ]
 
     data = []
@@ -41,7 +42,8 @@ def execute(filters=None):
         total_absences = 0
         total_late_entry_days = 0
         total_late_entry_minutes = 0
-        
+        total_workdays = 0  # Initialize total workdays
+
         for date in dates:
             status, late_entry_minutes = get_attendance_status(emp, date)
             row[date.strftime('%Y_%m_%d')] = status
@@ -54,12 +56,15 @@ def execute(filters=None):
             if late_entry_minutes > 0:
                 total_late_entry_days += 1
                 total_late_entry_minutes += late_entry_minutes
-        
+            if 'Holiday' not in status and 'Leave' not in status and 'Absent' not in status:
+                total_workdays += 1  # Count workdays
+
         row["total_holidays"] = total_holidays
         row["total_leaves"] = total_leaves
         row["total_absences"] = total_absences
         row["total_late_entry_days"] = total_late_entry_days
         row["total_late_entry_minutes"] = total_late_entry_minutes
+        row["total_workdays"] = total_workdays  # Add total workdays to row
         data.append(row)
 
     return columns, data
@@ -67,14 +72,14 @@ def execute(filters=None):
 
 def get_attendance_status(emp, date):
     # Fetch check-in and check-out
-    checkin_time = frappe.db.sql("""
+    checkin_time = frappe.db.sql(""" 
         SELECT time FROM `tabEmployee Checkin`
         WHERE employee = %s AND log_type = 'IN' AND time BETWEEN %s AND %s
         ORDER BY time ASC LIMIT 1
     """, (emp.name, f"{date} 00:00:00", f"{date} 23:59:59"), as_dict=1)
 
     # Get last check-out
-    checkout_time = frappe.db.sql("""
+    checkout_time = frappe.db.sql(""" 
         SELECT time FROM `tabEmployee Checkin`
         WHERE employee = %s AND log_type = 'OUT' AND time BETWEEN %s AND %s
         ORDER BY time DESC LIMIT 1
@@ -124,7 +129,7 @@ def get_attendance_status(emp, date):
             checkin_dt = checkin if isinstance(checkin, datetime) else datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
             if checkin_dt > shift_start + timedelta(minutes=grace):
                 checkin_str = f'<span style="color:red">{checkin_str}</span>'
-                late_entry_minutes = (checkin_dt - shift_start-timedelta(minutes=grace)).seconds // 60
+                late_entry_minutes = (checkin_dt - shift_start - timedelta(minutes=grace)).seconds // 60
                 if late_entry_minutes < 0:
                     late_entry_minutes = 0
         return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>', late_entry_minutes
