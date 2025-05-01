@@ -124,7 +124,6 @@ def get_attendance_status(emp, date):
 
     # 4. If it's today and shift hasn't started yet, leave empty
     now = now_datetime()
-    now = now.strftime('%H:%M') if isinstance(now, datetime) else '-' 
     if date == now.date() and shift_start and now < shift_start:
         return f'<div style="text-align:center">-</div>'
 
