@@ -1,5 +1,4 @@
 from frappe import _  # Add this import to make __() available
-
 import frappe
 from datetime import datetime, timedelta, time
 from frappe.utils import now_datetime
@@ -29,7 +28,9 @@ def execute(filters=None):
     ] + [
         {"label": _("Total Holidays"), "fieldname": "total_holidays", "fieldtype": "Int", "width": 120},
         {"label": _("Total Leaves"), "fieldname": "total_leaves", "fieldtype": "Int", "width": 120},
-        {"label": _("Total Absences"), "fieldname": "total_absences", "fieldtype": "Int", "width": 120}
+        {"label": _("Total Absences"), "fieldname": "total_absences", "fieldtype": "Int", "width": 120},
+        {"label": _("Sum of Late Entry Days"), "fieldname": "total_late_entry_days", "fieldtype": "Int", "width": 160},
+        {"label": _("Sum of Minutes of Late Entry"), "fieldname": "total_late_entry_minutes", "fieldtype": "Int", "width": 160}
     ]
 
     data = []
@@ -38,8 +39,11 @@ def execute(filters=None):
         total_holidays = 0
         total_leaves = 0
         total_absences = 0
+        total_late_entry_days = 0
+        total_late_entry_minutes = 0
+        
         for date in dates:
-            status = get_attendance_status(emp, date)
+            status, late_entry_minutes = get_attendance_status(emp, date)
             row[date.strftime('%Y_%m_%d')] = status
             if 'Holiday' in status:
                 total_holidays += 1
@@ -47,9 +51,15 @@ def execute(filters=None):
                 total_leaves += 1
             elif 'Absent' in status:
                 total_absences += 1
+            if late_entry_minutes > 0:
+                total_late_entry_days += 1
+                total_late_entry_minutes += late_entry_minutes
+        
         row["total_holidays"] = total_holidays
         row["total_leaves"] = total_leaves
         row["total_absences"] = total_absences
+        row["total_late_entry_days"] = total_late_entry_days
+        row["total_late_entry_minutes"] = total_late_entry_minutes
         data.append(row)
 
     return columns, data
@@ -102,6 +112,8 @@ def get_attendance_status(emp, date):
         "docstatus": 1
     })
 
+    late_entry_minutes = 0
+
     # 1. If there's any checkin or checkout, show attendance ignoring holiday
     if checkin or checkout:
         # Format times
@@ -112,20 +124,21 @@ def get_attendance_status(emp, date):
             checkin_dt = checkin if isinstance(checkin, datetime) else datetime.strptime(checkin, "%Y-%m-%d %H:%M:%S")
             if checkin_dt > shift_start + timedelta(minutes=grace):
                 checkin_str = f'<span style="color:red">{checkin_str}</span>'
-        return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>'
+                late_entry_minutes = (checkin_dt - shift_start).seconds // 60
+        return f'<div style="text-align:center">{checkin_str} - {checkout_str}</div>', late_entry_minutes
 
     # 2. Holiday (no checkin) -> green
     if is_holiday:
-        return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">{_("Holiday")}</div>'
+        return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">{_("Holiday")}</div>', late_entry_minutes
 
     # 3. Approved leave -> yellow
     if is_on_leave:
-        return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">{_("Leave")}</div>'
+        return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">{_("Leave")}</div>', late_entry_minutes
 
     # 4. If it's today and shift hasn't started yet, leave empty
     now = now_datetime()
     if date == now.date() and shift_start and now < shift_start:
-        return f'<div style="text-align:center">-</div>'
+        return f'<div style="text-align:center">-</div>', late_entry_minutes
 
     # 5. Absent -> black
-    return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{_("Absent")}</div>'
+    return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{_("Absent")}</div>', late_entry_minutes
