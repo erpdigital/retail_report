@@ -69,8 +69,8 @@ def get_attendance_status(emp, date):
         ORDER BY time DESC LIMIT 1
     """, (emp.name, f"{date} 00:00:00", f"{date} 23:59:59"), as_dict=1)
 
-    checkin_time = checkin[0].time if checkin else None
-    checkout_time = checkout[0].time if checkout else None
+    checkin_time = checkin[0]["time"] if checkin else None
+    checkout_time = checkout[0]["time"] if checkout else None
 
     # Shift start and grace
     shift_start_time = None
