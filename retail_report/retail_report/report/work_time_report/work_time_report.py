@@ -116,9 +116,15 @@ def get_attendance_status(emp, date):
     # 2. Holiday (no checkin) -> green
     if is_holiday:
         return f'<div style="background:#d4edda;padding:4px;border-radius:4px;text-align:center">{_("Holiday")}</div>'
+
     # 3. Approved leave -> yellow
     if is_on_leave:
         return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">{_("Leave")}</div>'
-    # 4. Absent -> black
-    return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{_("Absent")}</div>'
 
+    # 4. If it's today and shift hasn't started yet, leave empty
+    now = datetime.now()
+    if date == now.date() and shift_start and now < shift_start:
+        return f'<div style="text-align:center">-</div>'
+
+    # 5. Absent -> black
+    return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{_("Absent")}</div>'
