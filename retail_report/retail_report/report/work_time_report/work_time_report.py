@@ -2,6 +2,7 @@ from frappe import _  # Add this import to make __() available
 
 import frappe
 from datetime import datetime, timedelta, time
+from frappe.utils import now_datetime
 
 def execute(filters=None):
     from_date = datetime.strptime(filters.get("from_date"), "%Y-%m-%d").date()
@@ -122,9 +123,9 @@ def get_attendance_status(emp, date):
         return f'<div style="background:#fff3cd;padding:4px;border-radius:4px;text-align:center">{_("Leave")}</div>'
 
     # 4. If it's today and shift hasn't started yet, leave empty
-    now = datetime.now()
+    now = now_datetime()
     if date == now.date() and shift_start and now < shift_start:
-        return f'<div style="text-align:center">-</div>'
+        return f'<div style="text-align:center">-{ shift_start }</div>'
 
     # 5. Absent -> black
     return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{_("Absent")}</div>'
