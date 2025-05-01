@@ -126,7 +126,7 @@ def get_attendance_status(emp, date):
     now = now_datetime()
     now = now.strftime('%H:%M') if isinstance(now, datetime) else '-' 
     if date == now.date() and shift_start and now < shift_start:
-        return f'<div style="text-align:center">-{ shift_start }</div>'
+        return f'<div style="text-align:center">-</div>'
 
     # 5. Absent -> black
     return f'<div style="background:#000;color:#fff;padding:4px;border-radius:4px;text-align:center">{_("Absent")}</div>'
