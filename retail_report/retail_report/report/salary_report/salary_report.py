@@ -21,7 +21,7 @@ def link_checkins_to_existing_attendance(from_date, to_date):
             frappe.db.set_value("Employee Checkin", chk.name, "attendance", att.name)
 
     frappe.db.commit()
-    frappe.msgprint(f"✅ Linked checkins to {len(attendance_records)} attendance recor
+    
 def execute(filters=None):
     from_date = datetime.strptime(filters.get("from_date"), "%Y-%m-%d").date()
     to_date = datetime.strptime(filters.get("to_date"), "%Y-%m-%d").date()
