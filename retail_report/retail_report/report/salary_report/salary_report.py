@@ -1,6 +1,6 @@
 import frappe
 from datetime import datetime, timedelta
-
+from frappe import _
 def execute(filters=None):
     from_date = datetime.strptime(filters.get("from_date"), "%Y-%m-%d").date()
     to_date = datetime.strptime(filters.get("to_date"), "%Y-%m-%d").date()
@@ -12,17 +12,16 @@ def execute(filters=None):
     )
 
     columns = [
-        {"label": "Employee", "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
-        {"label": "Employee Name", "fieldname": "employee_name", "fieldtype": "Data", "width": 150},
-        {"label": "Worked Days", "fieldname": "worked_days", "fieldtype": "Int", "width": 120},
-        {"label": "Absent Days", "fieldname": "absent_days", "fieldtype": "Int", "width": 120},
-        {"label": "Leave Days", "fieldname": "leave_days", "fieldtype": "Int", "width": 120},
-        {"label": "Holiday Days", "fieldname": "holidays", "fieldtype": "Int", "width": 120},
-        {"label": "Bonus", "fieldname": "bonus", "fieldtype": "Currency", "width": 100},
-        {"label": "Daily Wage", "fieldname": "daily_wage", "fieldtype": "Currency", "width": 100},
-        {"label": "Calculated Salary", "fieldname": "calculated_salary", "fieldtype": "Currency", "width": 150}
-    ]
-
+    {"label": _("Employee"), "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
+    {"label": _("Employee Name"), "fieldname": "employee_name", "fieldtype": "Data", "width": 150},
+    {"label": _("Worked Days"), "fieldname": "worked_days", "fieldtype": "Int", "width": 120},
+    {"label": _("Absent Days"), "fieldname": "absent_days", "fieldtype": "Int", "width": 120},
+    {"label": _("Leave Days"), "fieldname": "leave_days", "fieldtype": "Int", "width": 120},
+    {"label": _("Holiday Days"), "fieldname": "holidays", "fieldtype": "Int", "width": 120},
+    {"label": _("Bonus"), "fieldname": "bonus", "fieldtype": "Currency", "width": 100},
+    {"label": _("Daily Wage"), "fieldname": "daily_wage", "fieldtype": "Currency", "width": 100},
+    {"label": _("Calculated Salary"), "fieldname": "calculated_salary", "fieldtype": "Currency", "width": 150}
+]
     data = []
     for emp in employees:
         worked_days = absent_days = leave_days = holidays = 0
