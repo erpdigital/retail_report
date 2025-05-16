@@ -85,7 +85,7 @@ def execute(filters=None):
             "absent_days": absent_days,
             "leave_days": leave_days,
             "holidays": holidays,
-            "bonus": bonus,
+            "bonus": existing_row.bonus,
             "daily_wage": daily_wage,
             "calculated_salary": salary
         })
