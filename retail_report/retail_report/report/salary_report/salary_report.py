@@ -1,12 +1,15 @@
 import frappe
 from datetime import datetime, timedelta
-from frappe.utils import get_first_day, get_last_day, now_datetime
 
 def execute(filters=None):
     from_date = datetime.strptime(filters.get("from_date"), "%Y-%m-%d").date()
     to_date = datetime.strptime(filters.get("to_date"), "%Y-%m-%d").date()
 
-    employees = frappe.get_all("Employee", filters={"status": "Active"}, fields=["name", "employee_name", "holiday_list", "daily_wage"])
+    employees = frappe.get_all(
+        "Employee",
+        filters={"status": "Active"},
+        fields=["name", "employee_name", "holiday_list", "daily_wage"]
+    )
 
     columns = [
         {"label": "Employee", "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 120},
@@ -40,6 +43,29 @@ def execute(filters=None):
             current += timedelta(days=1)
 
         salary = worked_days * daily_wage + bonus
+
+        # Save to child table of Employee if entry for month/year doesn't exist
+        month = from_date.strftime("%B")
+        year = from_date.year
+        emp_doc = frappe.get_doc("Employee", emp.name)
+        exists = [
+            row for row in emp_doc.monthly_payroll_summary
+            if row.month == month and row.year == year
+        ]
+        if not exists:
+            emp_doc.append("monthly_payroll_summary", {
+                "month": month,
+                "year": year,
+                "worked_days": worked_days,
+                "absent_days": absent_days,
+                "leave_days": leave_days,
+                "holidays": holidays,
+                "bonus": bonus,
+                "daily_wage": daily_wage,
+                "calculated_salary": salary
+            })
+            emp_doc.save(ignore_permissions=True)
+
         data.append({
             "employee": emp.name,
             "employee_name": emp.employee_name,
@@ -56,7 +82,7 @@ def execute(filters=None):
 
 
 def get_or_create_attendance(emp, date):
-    # First, check if attendance exists already
+    # Check if attendance already exists
     existing = frappe.db.get_value("Attendance", {
         "employee": emp.name,
         "attendance_date": date
@@ -64,7 +90,7 @@ def get_or_create_attendance(emp, date):
     if existing:
         return existing
 
-    # Check if it’s a holiday
+    # Check for holiday
     is_holiday = frappe.db.exists("Holiday", {
         "holiday_date": date,
         "parent": emp.holiday_list
@@ -72,7 +98,7 @@ def get_or_create_attendance(emp, date):
     if is_holiday:
         return "Holiday"
 
-    # Check if approved leave
+    # Check for approved leave
     is_on_leave = frappe.db.exists("Leave Application", {
         "employee": emp.name,
         "from_date": ["<=", date],
@@ -83,7 +109,7 @@ def get_or_create_attendance(emp, date):
     if is_on_leave:
         return "On Leave"
 
-    # Check Checkins
+    # Check for checkins
     checkin = frappe.db.exists("Employee Checkin", {
         "employee": emp.name,
         "log_type": "IN",
@@ -100,7 +126,7 @@ def get_or_create_attendance(emp, date):
     else:
         status = "Absent"
 
-    # Create attendance if needed
+    # Create attendance
     attendance = frappe.new_doc("Attendance")
     attendance.employee = emp.name
     attendance.attendance_date = date
