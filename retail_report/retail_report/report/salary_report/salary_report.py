@@ -48,23 +48,35 @@ def execute(filters=None):
         month = from_date.strftime("%B")
         year = from_date.year
         emp_doc = frappe.get_doc("Employee", emp.name)
-        exists = [
-            row for row in emp_doc.monthly_payroll_summary
-            if row.month == month and row.year == year
-        ]
-        if not exists:
+        existing_row = None
+        for row in emp_doc.monthly_payroll_summary:
+            if row.month == month and row.year == year:
+                existing_row = row
+                break
+
+        if existing_row:
+        # Overwrite values
+            existing_row.worked_days = worked_days
+            existing_row.absent_days = absent_days
+            existing_row.leave_days = leave_days
+            existing_row.holidays = holidays
+            existing_row.daily_wage = daily_wage
+            existing_row.calculated_salary = salary
+        else:
+            # Create new row
             emp_doc.append("monthly_payroll_summary", {
-                "month": month,
-                "year": year,
-                "worked_days": worked_days,
-                "absent_days": absent_days,
-                "leave_days": leave_days,
-                "holidays": holidays,
-                "bonus": bonus,
-                "daily_wage": daily_wage,
-                "calculated_salary": salary
-            })
-            emp_doc.save(ignore_permissions=True)
+        "month": month,
+        "year": year,
+        "worked_days": worked_days,
+        "absent_days": absent_days,
+        "leave_days": leave_days,
+        "holidays": holidays,
+        "bonus": bonus,
+        "daily_wage": daily_wage,
+        "calculated_salary": salary
+    })
+
+        emp_doc.save(ignore_permissions=True)
 
         data.append({
             "employee": emp.name,
