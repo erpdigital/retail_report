@@ -1,6 +1,27 @@
 import frappe
 from datetime import datetime, timedelta
 from frappe import _
+
+def link_checkins_to_existing_attendance(from_date, to_date):
+    # Get all attendance records between from_date and to_date
+    attendance_records = frappe.get_all("Attendance", filters={
+        "attendance_date": ["between", [from_date, to_date]],
+        "docstatus": 1
+    }, fields=["name", "employee", "attendance_date"])
+
+    for att in attendance_records:
+        date_str = att.attendance_date.strftime("%Y-%m-%d")
+        checkins = frappe.get_all("Employee Checkin", filters={
+            "employee": att.employee,
+            "time": ["between", [f"{date_str} 00:00:00", f"{date_str} 23:59:59"]],
+            "attendance": ["is", "not set"]
+        }, fields=["name"])
+
+        for chk in checkins:
+            frappe.db.set_value("Employee Checkin", chk.name, "attendance", att.name)
+
+    frappe.db.commit()
+    frappe.msgprint(f"✅ Linked checkins to {len(attendance_records)} attendance recor
 def execute(filters=None):
     from_date = datetime.strptime(filters.get("from_date"), "%Y-%m-%d").date()
     to_date = datetime.strptime(filters.get("to_date"), "%Y-%m-%d").date()
@@ -88,7 +109,7 @@ def execute(filters=None):
             "daily_wage": daily_wage,
             "calculated_salary": salary
         })
-
+    link_checkins_to_existing_attendance(from_date, to_date)
     return columns, data
 
 
