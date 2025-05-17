@@ -82,6 +82,7 @@ def execute(filters=None):
             existing_row.holidays = holidays
             existing_row.daily_wage = daily_wage
             existing_row.calculated_salary = salary
+            existing_row.total_paid = salary - existing_row.deposit - existing_row.advance_payment 
         else:
             # Create new row
             emp_doc.append("monthly_payroll_summary", {
@@ -93,7 +94,8 @@ def execute(filters=None):
         "holidays": holidays,
         "bonus": bonus,
         "daily_wage": daily_wage,
-        "calculated_salary": salary
+        "calculated_salary": salary,
+        "total_paid":        
     })
 
         emp_doc.save(ignore_permissions=True)
