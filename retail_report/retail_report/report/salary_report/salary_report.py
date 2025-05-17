@@ -41,7 +41,10 @@ def execute(filters=None):
     {"label": _("Holiday Days"), "fieldname": "holidays", "fieldtype": "Int", "width": 120},
     {"label": _("Bonus"), "fieldname": "bonus", "fieldtype": "Currency", "width": 100},
     {"label": _("Daily Wage"), "fieldname": "daily_wage", "fieldtype": "Currency", "width": 100},
-    {"label": _("Calculated Salary"), "fieldname": "calculated_salary", "fieldtype": "Currency", "width": 150}
+    {"label": _("Calculated Salary"), "fieldname": "calculated_salary", "fieldtype": "Currency", "width": 150},
+     {"label": _("Deposit"), "fieldname": "deposit", "fieldtype": "Currency", "width": 100},
+    {"label": _("Advance Payment"), "fieldname": "advance_payment", "fieldtype": "Currency", "width": 120},
+    {"label": _("Total Paid"), "fieldname": "total_paid", "fieldtype": "Currency", "width": 120}    
 ]
     data = []
     for emp in employees:
