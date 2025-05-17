@@ -86,8 +86,15 @@ def execute(filters=None):
             existing_row.daily_wage = daily_wage
             existing_row.calculated_salary = salary
             existing_row.total_paid = salary - existing_row.deposit - existing_row.advance_payment 
+            
+            deposit = existing_row.deposit
+            advance_payment =existing_row.advance_payment
+            total_paid = existing_row.total_paid
         else:
             # Create new row
+            deposit = 0
+            advance_payment =0
+            total_paid = salary
             emp_doc.append("monthly_payroll_summary", {
         "month": month,
         "year": year,
@@ -100,9 +107,9 @@ def execute(filters=None):
         "calculated_salary": salary,
         "total_paid": salary      
     })
-
+         
         emp_doc.save(ignore_permissions=True)
-
+         
         data.append({
             "employee": emp.name,
             "employee_name": emp.employee_name,
@@ -113,9 +120,9 @@ def execute(filters=None):
             "bonus": existing_row.bonus,
             "daily_wage": daily_wage,
             "calculated_salary": salary,
-            "deposit":  existing_row.deposit,
-            "advance_payment":  existing_row.advance_payment,
-            "total_paid": existing_row.total_paid
+            "deposit":  deposit,
+            "advance_payment":  advance_payment,
+            "total_paid": total_paid
         })
     link_checkins_to_existing_attendance(from_date, to_date)
     return columns, data
