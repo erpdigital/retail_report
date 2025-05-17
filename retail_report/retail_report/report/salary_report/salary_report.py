@@ -95,7 +95,7 @@ def execute(filters=None):
         "bonus": bonus,
         "daily_wage": daily_wage,
         "calculated_salary": salary,
-        "total_paid":        
+        "total_paid": salary      
     })
 
         emp_doc.save(ignore_permissions=True)
