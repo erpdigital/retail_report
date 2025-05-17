@@ -112,7 +112,10 @@ def execute(filters=None):
             "holidays": holidays,
             "bonus": existing_row.bonus,
             "daily_wage": daily_wage,
-            "calculated_salary": salary
+            "calculated_salary": salary,
+            "deposit":  existing_row.deposit,
+            "advance_payment":  existing_row.advance_payment,
+            "total_paid": existing_row.total_paid
         })
     link_checkins_to_existing_attendance(from_date, to_date)
     return columns, data
