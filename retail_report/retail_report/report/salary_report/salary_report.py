@@ -86,7 +86,7 @@ def execute(filters=None):
             existing_row.daily_wage = daily_wage
             existing_row.calculated_salary = salary
             existing_row.total_paid = salary - existing_row.deposit - existing_row.advance_payment 
-            
+            bonus = existing_row.bonus
             deposit = existing_row.deposit
             advance_payment =existing_row.advance_payment
             total_paid = existing_row.total_paid
@@ -94,6 +94,7 @@ def execute(filters=None):
             # Create new row
             deposit = 0
             advance_payment =0
+            bonus = 0
             total_paid = salary
             emp_doc.append("monthly_payroll_summary", {
         "month": month,
@@ -117,7 +118,7 @@ def execute(filters=None):
             "absent_days": absent_days,
             "leave_days": leave_days,
             "holidays": holidays,
-            "bonus": existing_row.bonus,
+            "bonus": bonus,
             "daily_wage": daily_wage,
             "calculated_salary": salary,
             "deposit":  deposit,
