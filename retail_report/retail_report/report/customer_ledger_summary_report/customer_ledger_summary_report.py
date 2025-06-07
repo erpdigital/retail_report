@@ -51,6 +51,13 @@ class PartyLedgerSummaryReport(object):
 				"width": 100,
 			},
 			{
+				"label": _("Workflow Status"),
+				"fieldtype": "HTML",
+				"fieldname": "workflow_state",
+			
+				"width": 50,
+			},
+			{
 				"label": _("Status"),
 				"fieldtype": "HTML",
 				"fieldname": "status",
@@ -177,6 +184,7 @@ class PartyLedgerSummaryReport(object):
 						"party": gle.party,
 						"party_name": gle.party_name,
 						"customer_group": '',
+						"workflow_state":'',
 						"credit_days":'',
 						"status":'1',
 						"color": '#FAFFFF',
@@ -209,7 +217,7 @@ class PartyLedgerSummaryReport(object):
 					self.party_data[gle.party].paid_amount -= amount
 					paid_amount_ += self.party_data[gle.party].paid_amount
 
-		all_customers = frappe.get_all('Customer', fields=['name','customer_name','customer_group','payment_terms'])
+		all_customers = frappe.get_all('Customer', fields=['name','customer_name','customer_group','payment_terms','workflow_state'])
 		total_amount = frappe.db.sql("""
         SELECT customer, SUM(outstanding_amount)
         FROM `tabSales Invoice`
@@ -265,6 +273,7 @@ class PartyLedgerSummaryReport(object):
 				self.party_data[customer].status =f'<span class="span-Status" style="background-color:{color}">{status}</span>' 
 				self.party_data[customer].color = color	
 				self.party_data[customer].customer_group = customer_group
+				self.party_data[customer].workflow_state =  customer1.get('workflow_state')
 				if customer in result_total:
 					self.party_data[customer].advance_payments = result_total[customer]
 				else:
