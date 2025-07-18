@@ -3,6 +3,7 @@ import frappe
 from datetime import datetime, timedelta, time
 from frappe.utils import now_datetime
 
+
 def execute(filters=None):
     from_date = datetime.strptime(filters.get("from_date"), "%Y-%m-%d").date()
     to_date = datetime.strptime(filters.get("to_date"), "%Y-%m-%d").date()
