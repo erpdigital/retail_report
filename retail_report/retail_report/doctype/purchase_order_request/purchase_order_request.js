@@ -30,9 +30,24 @@ frappe.ui.form.on("Purchase Order Request", {
 
 function update_row_weight(frm, cdt, cdn) {
 	let row = locals[cdt][cdn];
-	row.total_weight = flt(row.qty) * flt(row.weight_per_unit);
+	row.total_weight = flt(row.qty) * flt(row.conversion_factor || 1) * flt(row.weight_per_unit);
 	refresh_field("total_weight", cdn, "items");
 	update_totals(frm);
+}
+
+function update_conversion_factor(frm, cdt, cdn) {
+	let row = locals[cdt][cdn];
+	if (!row.item_code || !row.uom) {
+		return;
+	}
+	frappe.call({
+		method: "erpnext.stock.get_item_details.get_conversion_factor",
+		args: { item_code: row.item_code, uom: row.uom },
+		callback: function (r) {
+			frappe.model.set_value(cdt, cdn, "conversion_factor", r.message.conversion_factor);
+			update_row_weight(frm, cdt, cdn);
+		},
+	});
 }
 
 function update_totals(frm) {
@@ -53,6 +68,9 @@ frappe.ui.form.on("Purchase Order Request Item", {
 		update_row_weight(frm, cdt, cdn);
 	},
 	item_code: function (frm, cdt, cdn) {
-		update_row_weight(frm, cdt, cdn);
+		update_conversion_factor(frm, cdt, cdn);
+	},
+	uom: function (frm, cdt, cdn) {
+		update_conversion_factor(frm, cdt, cdn);
 	},
 });

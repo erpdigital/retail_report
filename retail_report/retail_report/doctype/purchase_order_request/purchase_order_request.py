@@ -14,7 +14,7 @@ class PurchaseOrderRequest(Document):
 		total_weight = 0.0
 
 		for row in self.items:
-			row.total_weight = flt(row.qty) * flt(row.weight_per_unit)
+			row.total_weight = flt(row.qty) * flt(row.conversion_factor or 1) * flt(row.weight_per_unit)
 			total_qty += flt(row.qty)
 			total_weight += flt(row.total_weight)
 
@@ -67,9 +67,8 @@ def make_purchase_order(source_name, target_doc=None):
 
 	def update_item(source, target, source_parent):
 		target.qty = source.qty
-		target.stock_uom = source.uom
 		target.uom = source.uom
-		target.conversion_factor = 1
+		target.conversion_factor = source.conversion_factor or 1
 		target.schedule_date = source.schedule_date
 
 	doclist = get_mapped_doc(

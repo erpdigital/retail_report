@@ -9,6 +9,7 @@
   "item_name",
   "qty",
   "uom",
+  "conversion_factor",
   "schedule_date",
   "weight_uom",
   "weight_per_unit",
@@ -48,6 +49,13 @@
    "in_list_view": 1,
    "label": "UOM",
    "options": "UOM"
+  },
+  {
+   "default": "1",
+   "fieldname": "conversion_factor",
+   "fieldtype": "Float",
+   "label": "Conversion Factor",
+   "read_only": 1
   },
   {
    "fieldname": "schedule_date",
