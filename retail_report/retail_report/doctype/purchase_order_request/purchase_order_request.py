@@ -29,6 +29,35 @@ class PurchaseOrderRequest(Document):
 
 
 @frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def item_uom_query(doctype, txt, searchfield, start, page_len, filters):
+	item_code = filters.get("item_code")
+	if not item_code:
+		return []
+
+	stock_uom = frappe.db.get_value("Item", item_code, "stock_uom")
+
+	return frappe.db.sql(
+		"""
+		select uom from (
+			select uom from `tabUOM Conversion Detail` where parent = %(item_code)s
+			union
+			select %(stock_uom)s as uom
+		) as item_uoms
+		where uom like %(txt)s
+		limit %(start)s, %(page_len)s
+		""",
+		{
+			"item_code": item_code,
+			"stock_uom": stock_uom,
+			"txt": f"%{txt}%",
+			"start": start,
+			"page_len": page_len,
+		},
+	)
+
+
+@frappe.whitelist()
 def make_purchase_order(source_name, target_doc=None):
 	def set_missing_values(source, target):
 		target.supplier = source.supplier or ""

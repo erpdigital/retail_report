@@ -2,6 +2,15 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Purchase Order Request", {
+	setup: function (frm) {
+		frm.set_query("uom", "items", function (doc, cdt, cdn) {
+			let row = locals[cdt][cdn];
+			return {
+				query: "retail_report.retail_report.doctype.purchase_order_request.purchase_order_request.item_uom_query",
+				filters: { item_code: row.item_code },
+			};
+		});
+	},
 	refresh: function (frm) {
 		if (frm.doc.docstatus === 1 && frm.doc.status !== "Ordered") {
 			frm.add_custom_button(
