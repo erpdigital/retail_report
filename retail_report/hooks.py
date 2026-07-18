@@ -7,6 +7,14 @@ app_description = "Retail Report"
 app_email = "Alimerdanrahimov@gmail.com"
 app_license = "MIT"
 
+# Fixtures
+# --------
+
+fixtures = [
+	{"dt": "Role", "filters": [["role_name", "in", ["Purchase Requester"]]]},
+	{"dt": "Custom Field", "filters": [["dt", "in", ["Purchase Order", "Purchase Order Item"]]]},
+]
+
 # Includes in <head>
 # ------------------
 
@@ -109,6 +117,13 @@ page_js = {"page" : "public/js/hide.js"}
 #		"on_trash": "method"
 #	}
 # }
+
+doc_events = {
+	"Purchase Order": {
+		"on_submit": "retail_report.retail_report.doctype.purchase_order_request.purchase_order_request.update_request_on_po_submit",
+		"on_cancel": "retail_report.retail_report.doctype.purchase_order_request.purchase_order_request.update_request_on_po_cancel",
+	}
+}
 
 # Scheduled Tasks
 # ---------------
