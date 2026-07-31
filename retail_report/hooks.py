@@ -12,7 +12,7 @@ app_license = "MIT"
 
 fixtures = [
 	{"dt": "Role", "filters": [["role_name", "in", ["Purchase Requester"]]]},
-	{"dt": "Custom Field", "filters": [["dt", "in", ["Purchase Order", "Purchase Order Item"]]]},
+	{"dt": "Custom Field", "filters": [["dt", "in", ["Purchase Order", "Purchase Order Item", "Supplier"]]]},
 ]
 
 # Includes in <head>
@@ -71,8 +71,7 @@ page_js = {"page" : "public/js/hide.js"}
 # Installation
 # ------------
 
-# before_install = "retail_report.install.before_install"
-# after_install = "retail_report.install.after_install"
+after_install = "retail_report.install.after_install"
 
 # Uninstallation
 # ------------
