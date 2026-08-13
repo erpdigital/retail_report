@@ -41,3 +41,8 @@ Items to Request from {0},Товары для заявки поставщику 
 Create Purchase Order Request,Создать заявку на закупку,
 "Purchase Order Request <a href=""/app/purchase-order-request/{0}"">{0}</a> created","Создана заявка на закупку <a href=""/app/purchase-order-request/{0}"">{0}</a>",
 Exclude from Reorder Suggestions,Исключить из подсказок на дозаказ,
+Order Days (A Items),Заказ на дней (товары A),
+Order Days (B Items),Заказ на дней (товары B),
+Order Days (C Items),Заказ на дней (товары C),
+Order UOM,Ед. заказа,
+1 {0} = {1} {2},1 {0} = {1} {2},

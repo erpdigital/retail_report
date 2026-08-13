@@ -1,6 +1,8 @@
 # Copyright (c) 2026, and contributors
 # For license information, please see license.txt
 
+import hashlib
+import json
 import math
 import statistics
 from collections import defaultdict
@@ -25,6 +27,12 @@ ABC_CUTOFF_B = 95
 # X = steady demand, Y = fluctuating, Z = sporadic/unpredictable.
 XYZ_CUTOFF_X = 0.5
 XYZ_CUTOFF_Y = 1.0
+
+# The purchase-request workflow makes several server calls in a row (supplier
+# list -> items per supplier -> refresh after each created request). The rows
+# and supplier history barely change within that window, so they are cached
+# per filter-set instead of recomputed from scratch on every click.
+WORKFLOW_CACHE_TTL = 10 * 60
 
 
 def execute(filters=None):
@@ -99,13 +107,11 @@ def compute_rows(filters):
 	if low_days <= critical_days:
 		frappe.throw(_("'Low Stock' day threshold must be greater than the 'Critical' day threshold"))
 
-	sales_map, revenue_map = get_sales_metrics(filters, from_date, to_date)
+	sales_map, revenue_map, daily_qty_map, monthly_qty_map = get_sales_history(filters, from_date, to_date)
 	stock_map = get_current_stock(filters)
 	item_codes = set(sales_map) | set(stock_map)
 	item_details = get_item_details(item_codes)
 
-	daily_qty_map = get_daily_qty(filters, from_date, to_date)
-	monthly_qty_map = get_monthly_qty(filters, from_date, to_date)
 	period_buckets = get_period_buckets(from_date, to_date)
 	abc_map = classify_abc(revenue_map)
 	xyz_map = classify_xyz(monthly_qty_map, period_buckets)
@@ -199,50 +205,6 @@ def get_item_group_condition(item_group):
 	return children + [item_group]
 
 
-def apply_sales_filters(query, filters, si, sii):
-	if filters.get("company"):
-		query = query.where(si.company == filters.company)
-	if filters.get("item_code"):
-		query = query.where(sii.item_code == filters.item_code)
-	if filters.get("item_group"):
-		query = query.where(sii.item_group.isin(get_item_group_condition(filters.item_group)))
-	return query
-
-
-def get_sales_metrics(filters, from_date, to_date):
-	"""Qty sold (demand) and revenue (for ABC), in one pass over Sales Invoice Item.
-
-	Uses stock_qty, not qty: a line sold in a non-stock UOM (e.g. "Box" of 12)
-	records qty=1 but consumes 12 stock units - stock_qty is qty * conversion_factor,
-	the only figure comparable to Bin.actual_qty. revenue stays on qty * rate since
-	rate is per the transaction UOM, so the amount is already UOM-invariant.
-	"""
-	si = frappe.qb.DocType("Sales Invoice")
-	sii = frappe.qb.DocType("Sales Invoice Item")
-
-	query = (
-		frappe.qb.from_(sii)
-		.join(si)
-		.on(sii.parent == si.name)
-		.select(
-			sii.item_code,
-			Sum(sii.stock_qty).as_("qty_sold"),
-			Sum(sii.qty * sii.rate).as_("revenue"),
-		)
-		.where(si.docstatus == 1)
-		.where(si.posting_date[from_date:to_date])
-		.groupby(sii.item_code)
-	)
-	query = apply_sales_filters(query, filters, si, sii)
-
-	qty_map, revenue_map = {}, {}
-	for row in query.run(as_dict=True):
-		qty_map[row.item_code] = flt(row.qty_sold)
-		revenue_map[row.item_code] = flt(row.revenue)
-
-	return qty_map, revenue_map
-
-
 def build_sales_conditions(filters, from_date, to_date):
 	conditions = ["si.docstatus = 1", "si.posting_date between %(from_date)s and %(to_date)s"]
 	params = {"from_date": from_date, "to_date": to_date}
@@ -260,36 +222,24 @@ def build_sales_conditions(filters, from_date, to_date):
 	return conditions, params
 
 
-def get_monthly_qty(filters, from_date, to_date):
-	"""Qty sold (in stock UOM) per item per calendar month, for XYZ scoring."""
+def get_sales_history(filters, from_date, to_date):
+	"""Every sales-derived input in ONE sweep of Sales Invoice Item, grouped by
+	item and posting date: total qty sold (demand), revenue (ABC), per-day qty
+	(median daily demand) and per-month qty (XYZ) all derive from the same rows.
+	This used to be three separate scans of the invoice table and dominated the
+	report's runtime.
+
+	Uses stock_qty, not qty: a line sold in a non-stock UOM (e.g. "Box" of 12)
+	records qty=1 but consumes 12 stock units - stock_qty is qty * conversion_factor,
+	the only figure comparable to Bin.actual_qty. revenue stays on qty * rate since
+	rate is per the transaction UOM, so the amount is already UOM-invariant.
+	"""
 	conditions, params = build_sales_conditions(filters, from_date, to_date)
 
 	rows = frappe.db.sql(
 		f"""
-		select sii.item_code, date_format(si.posting_date, '%%Y-%%m') as period, sum(sii.stock_qty) as qty
-		from `tabSales Invoice Item` sii
-		inner join `tabSales Invoice` si on si.name = sii.parent
-		where {" and ".join(conditions)}
-		group by sii.item_code, period
-		""",
-		params,
-		as_dict=True,
-	)
-
-	monthly_map = defaultdict(dict)
-	for row in rows:
-		monthly_map[row.item_code][row.period] = flt(row.qty)
-
-	return monthly_map
-
-
-def get_daily_qty(filters, from_date, to_date):
-	"""Qty sold (in stock UOM) per item on each day it actually sold, for median demand."""
-	conditions, params = build_sales_conditions(filters, from_date, to_date)
-
-	rows = frappe.db.sql(
-		f"""
-		select sii.item_code, sum(sii.stock_qty) as qty
+		select sii.item_code, si.posting_date,
+			sum(sii.stock_qty) as qty, sum(sii.qty * sii.rate) as revenue
 		from `tabSales Invoice Item` sii
 		inner join `tabSales Invoice` si on si.name = sii.parent
 		where {" and ".join(conditions)}
@@ -299,11 +249,24 @@ def get_daily_qty(filters, from_date, to_date):
 		as_dict=True,
 	)
 
-	daily_map = defaultdict(list)
-	for row in rows:
-		daily_map[row.item_code].append(flt(row.qty))
+	sales_map = defaultdict(float)
+	revenue_map = defaultdict(float)
+	daily_qty_map = defaultdict(list)
+	monthly_qty_map = defaultdict(lambda: defaultdict(float))
 
-	return daily_map
+	for row in rows:
+		qty = flt(row.qty)
+		sales_map[row.item_code] += qty
+		revenue_map[row.item_code] += flt(row.revenue)
+		daily_qty_map[row.item_code].append(qty)
+		monthly_qty_map[row.item_code][row.posting_date.strftime("%Y-%m")] += qty
+
+	return (
+		dict(sales_map),
+		dict(revenue_map),
+		dict(daily_qty_map),
+		{item_code: dict(periods) for item_code, periods in monthly_qty_map.items()},
+	)
 
 
 def get_period_buckets(from_date, to_date):
@@ -422,17 +385,46 @@ def parse_filters(filters):
 	return frappe._dict(filters or {})
 
 
+def get_workflow_cache_key(filters):
+	relevant = {
+		key: str(filters.get(key) or "")
+		for key in ("company", "from_date", "to_date", "item_group", "item_code", "critical_days", "low_days")
+	}
+	digest = hashlib.sha1(json.dumps(relevant, sort_keys=True).encode()).hexdigest()[:16]
+	return f"stock_cover_forecast_at_risk:{digest}"
+
+
+def get_at_risk_state(filters):
+	"""At-risk rows + latest-supplier map for the purchase-request workflow,
+	cached per filter-set (see WORKFLOW_CACHE_TTL). The already-requested
+	exclusion is deliberately NOT part of the cached state - it must stay live
+	so items drop out of the dialogs the moment their request is created."""
+	cache_key = get_workflow_cache_key(filters)
+	# expires=True: without it a cache MISS gets memoized as None in
+	# frappe.local.cache and every later lookup in the process recomputes.
+	state = frappe.cache().get_value(cache_key, expires=True)
+
+	if state is None:
+		rows, _critical_days, low_days = compute_rows(filters)
+		at_risk = [row for row in rows if row["status"] in (STATUS_CRITICAL, STATUS_LOW)]
+		supplier_map = get_latest_suppliers([row["item_code"] for row in at_risk], filters.get("company"))
+		state = {"at_risk": at_risk, "low_days": low_days, "supplier_map": supplier_map}
+		frappe.cache().set_value(cache_key, state, expires_in_sec=WORKFLOW_CACHE_TTL)
+
+	return state
+
+
 def get_at_risk_rows(filters):
 	"""Red/yellow rows, minus items that already have an open Purchase Order
 	Request - re-suggesting those would risk ordering the same shortfall twice."""
-	rows, _critical_days, low_days = compute_rows(filters)
-	at_risk = [row for row in rows if row["status"] in (STATUS_CRITICAL, STATUS_LOW)]
+	state = get_at_risk_state(filters)
+	at_risk = state["at_risk"]
 
 	already_requested = get_already_requested_items([row["item_code"] for row in at_risk])
 	skipped_count = sum(1 for row in at_risk if row["item_code"] in already_requested)
 	at_risk = [row for row in at_risk if row["item_code"] not in already_requested]
 
-	return at_risk, low_days, skipped_count
+	return at_risk, state["low_days"], state["supplier_map"], skipped_count
 
 
 def get_already_requested_items(item_codes):
@@ -498,7 +490,63 @@ def get_latest_suppliers(item_codes, company=None):
 	return supplier_map
 
 
-def suggest_qty(row, low_days):
+def get_order_uoms(item_codes):
+	"""Preferred ordering UOM per item, e.g. Koropka = 10 шт: Item.purchase_uom
+	if set, else the item's secondary UOM with conversion_factor > 1 from its
+	UOM Conversion table. Items without one are ordered in stock UOM."""
+	if not item_codes:
+		return {}
+
+	rows = frappe.db.sql(
+		"""
+		select ucd.parent as item_code, ucd.uom, ucd.conversion_factor
+		from `tabUOM Conversion Detail` ucd
+		inner join `tabItem` i on i.name = ucd.parent
+		where ucd.parent in %(item_codes)s
+			and ucd.uom != i.stock_uom
+			and ucd.conversion_factor > 1
+			and (ifnull(i.purchase_uom, '') = '' or i.purchase_uom = ucd.uom)
+		order by ucd.idx
+		""",
+		{"item_codes": tuple(item_codes)},
+		as_dict=True,
+	)
+
+	order_uom_map = {}
+	for row in rows:
+		# Should an item ever define several bigger UOMs, keep the first by idx.
+		order_uom_map.setdefault(row.item_code, {"uom": row.uom, "conversion_factor": flt(row.conversion_factor)})
+
+	return order_uom_map
+
+
+def to_order_uom(stock_qty, uom_info, stock_uom):
+	"""Convert a suggested qty in stock UOM to the ordering UOM, rounding UP to
+	whole packs (97 шт at 10/Koropka -> 10 Koropka) so a shortfall is never
+	under-ordered."""
+	if not uom_info:
+		return stock_qty, stock_uom, 1
+
+	factor = uom_info["conversion_factor"]
+	return math.ceil(stock_qty / factor), uom_info["uom"], factor
+
+
+def get_cover_days(filters):
+	"""Per-ABC-class order coverage days from the report filters. A class whose
+	value is empty/0 falls back to the top-up-to-low-threshold suggestion."""
+	return {
+		"A": flt(filters.get("cover_days_a")),
+		"B": flt(filters.get("cover_days_b")),
+		"C": flt(filters.get("cover_days_c")),
+	}
+
+
+def suggest_qty(row, low_days, cover_days=None):
+	days = (cover_days or {}).get(row.get("abc_category"))
+	if days:
+		# Order size = N days of typical demand, N configured per ABC class.
+		return math.ceil(max(days * row["avg_daily_demand"], 1))
+
 	target_stock = low_days * row["avg_daily_demand"]
 	return math.ceil(max(target_stock - row["current_stock"], row["avg_daily_demand"], 1))
 
@@ -510,8 +558,7 @@ def get_at_risk_suppliers(filters=None):
 	check_purchase_request_permission()
 	filters = parse_filters(filters)
 
-	at_risk_rows, _low_days, skipped_count = get_at_risk_rows(filters)
-	supplier_map = get_latest_suppliers([row["item_code"] for row in at_risk_rows], filters.get("company"))
+	at_risk_rows, _low_days, supplier_map, skipped_count = get_at_risk_rows(filters)
 
 	counts = defaultdict(lambda: {"critical_count": 0, "low_count": 0})
 	for row in at_risk_rows:
@@ -540,13 +587,18 @@ def get_at_risk_items_for_supplier(filters=None, supplier=None):
 	check_purchase_request_permission()
 	filters = parse_filters(filters)
 
-	at_risk_rows, low_days, _skipped_count = get_at_risk_rows(filters)
-	supplier_map = get_latest_suppliers([row["item_code"] for row in at_risk_rows], filters.get("company"))
+	at_risk_rows, low_days, supplier_map, _skipped_count = get_at_risk_rows(filters)
+	cover_days = get_cover_days(filters)
+
+	matched = [row for row in at_risk_rows if supplier_map.get(row["item_code"], NO_SUPPLIER_LABEL) == supplier]
+	order_uoms = get_order_uoms([row["item_code"] for row in matched])
 
 	result = []
-	for row in at_risk_rows:
-		if supplier_map.get(row["item_code"], NO_SUPPLIER_LABEL) != supplier:
-			continue
+	for row in matched:
+		stock_qty = suggest_qty(row, low_days, cover_days)
+		order_qty, order_uom, conversion_factor = to_order_uom(
+			stock_qty, order_uoms.get(row["item_code"]), row["stock_uom"]
+		)
 
 		result.append(
 			{
@@ -560,7 +612,9 @@ def get_at_risk_items_for_supplier(filters=None, supplier=None):
 				"abc_category": row["abc_category"],
 				"xyz_category": row["xyz_category"],
 				"negative_stock": row["current_stock"] < 0,
-				"suggested_qty": suggest_qty(row, low_days),
+				"suggested_qty": order_qty,
+				"uom": order_uom,
+				"conversion_factor": conversion_factor,
 			}
 		)
 
@@ -583,7 +637,15 @@ def create_purchase_order_request(company, supplier, items):
 		doc.supplier = supplier
 
 	for item in items:
-		doc.append("items", {"item_code": item.get("item_code"), "qty": flt(item.get("qty")) or 1})
+		doc.append(
+			"items",
+			{
+				"item_code": item.get("item_code"),
+				"qty": flt(item.get("qty")) or 1,
+				"uom": item.get("uom"),
+				"conversion_factor": flt(item.get("conversion_factor")) or 1,
+			},
+		)
 
 	doc.insert()
 	return doc.name
@@ -598,8 +660,10 @@ def create_purchase_order_requests_for_all_suppliers(filters=None):
 	check_purchase_request_permission()
 	filters = parse_filters(filters)
 
-	at_risk_rows, low_days, skipped_count = get_at_risk_rows(filters)
-	supplier_map = get_latest_suppliers([row["item_code"] for row in at_risk_rows], filters.get("company"))
+	at_risk_rows, low_days, supplier_map, skipped_count = get_at_risk_rows(filters)
+	cover_days = get_cover_days(filters)
+
+	order_uoms = get_order_uoms([row["item_code"] for row in at_risk_rows])
 
 	items_by_supplier = defaultdict(list)
 	no_supplier_count = 0
@@ -610,7 +674,18 @@ def create_purchase_order_requests_for_all_suppliers(filters=None):
 			no_supplier_count += 1
 			continue
 
-		items_by_supplier[supplier].append({"item_code": row["item_code"], "qty": suggest_qty(row, low_days)})
+		stock_qty = suggest_qty(row, low_days, cover_days)
+		order_qty, order_uom, conversion_factor = to_order_uom(
+			stock_qty, order_uoms.get(row["item_code"]), row["stock_uom"]
+		)
+		items_by_supplier[supplier].append(
+			{
+				"item_code": row["item_code"],
+				"qty": order_qty,
+				"uom": order_uom,
+				"conversion_factor": conversion_factor,
+			}
+		)
 
 	created = [
 		create_purchase_order_request(filters.get("company"), supplier, items)

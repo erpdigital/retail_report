@@ -51,6 +51,27 @@ frappe.query_reports["Stock Cover Forecast"] = {
 			"fieldtype": "Float",
 			"default": 5,
 		},
+		// Purchase-request order size per ABC class: suggested qty = typical
+		// daily demand x these days. Empty/0 falls back to topping the item
+		// up to the Low Stock Threshold.
+		{
+			"fieldname": "cover_days_a",
+			"label": __("Order Days (A Items)"),
+			"fieldtype": "Float",
+			"default": 7,
+		},
+		{
+			"fieldname": "cover_days_b",
+			"label": __("Order Days (B Items)"),
+			"fieldtype": "Float",
+			"default": 5,
+		},
+		{
+			"fieldname": "cover_days_c",
+			"label": __("Order Days (C Items)"),
+			"fieldtype": "Float",
+			"default": 3,
+		},
 	],
 
 	onload: function (report) {
@@ -205,15 +226,28 @@ const stock_cover_forecast = {
 							  )}">${item.current_stock} ⚠</span>`
 							: item.current_stock;
 
+						// Ordering happens in the item's pack UOM (e.g. Koropka = 10 шт)
+						// when one is defined; qty below is already in that UOM.
+						const is_pack = flt(item.conversion_factor) > 1;
+						const uom_html = is_pack
+							? `<span title="${__("1 {0} = {1} {2}", [
+									frappe.utils.escape_html(item.uom),
+									item.conversion_factor,
+									frappe.utils.escape_html(item.stock_uom || ""),
+							  ])}">${frappe.utils.escape_html(item.uom)} <span class="text-muted">(×${item.conversion_factor})</span></span>`
+							: frappe.utils.escape_html(item.uom || item.stock_uom || "");
+
 						return `
-						<tr data-item-code="${frappe.utils.escape_html(item.item_code)}">
+						<tr data-item-code="${frappe.utils.escape_html(item.item_code)}"
+							data-uom="${frappe.utils.escape_html(item.uom || item.stock_uom || "")}"
+							data-conversion-factor="${flt(item.conversion_factor) || 1}">
 							<td><input type="checkbox" class="scf-item-check" checked></td>
 							<td>${frappe.utils.escape_html(item.item_code)}</td>
 							<td>${frappe.utils.escape_html(item.item_name || "")}</td>
 							<td class="text-center">${frappe.utils.escape_html(item.abc_category || "")}</td>
 							<td class="text-center">${xyz_html}</td>
-							<td class="text-right">${stock_html}</td>
-							<td>${frappe.utils.escape_html(item.stock_uom || "")}</td>
+							<td class="text-right">${stock_html} ${frappe.utils.escape_html(item.stock_uom || "")}</td>
+							<td>${uom_html}</td>
 							<td>
 								<input type="number" class="form-control scf-item-qty"
 									value="${item.suggested_qty}" min="0" step="any" style="width:100px;">
@@ -233,7 +267,7 @@ const stock_cover_forecast = {
 								<th>${__("ABC")}</th>
 								<th>${__("XYZ")}</th>
 								<th class="text-right">${__("Current Stock")}</th>
-								<th>${__("UOM")}</th>
+								<th>${__("Order UOM")}</th>
 								<th>${__("Qty to Order")}</th>
 							</tr>
 						</thead>
@@ -257,6 +291,8 @@ const stock_cover_forecast = {
 								rows.push({
 									item_code: $row.attr("data-item-code"),
 									qty: flt($row.find(".scf-item-qty").val()),
+									uom: $row.attr("data-uom"),
+									conversion_factor: flt($row.attr("data-conversion-factor")) || 1,
 								});
 							}
 						});
