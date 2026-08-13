@@ -236,19 +236,22 @@ class PartyLedgerSummaryReport(object):
     			filters={'customer': customer,  'status': 'Overdue'},
     			fieldname='status',
    			 order_by='due_date ASC')
-			if not overdue: 
+			Unpaid = None
+			if not overdue:
 				Unpaid = frappe.db.get_value(
     			'Sales Invoice',
     			filters={'customer': customer, 'status': 'Unpaid'},
     			fieldname='status',
    			 order_by='due_date ASC')
-			if not Unpaid:
+			partpaid = None
+			if not overdue and not Unpaid:
 				partpaid = frappe.db.get_value(
     			'Sales Invoice',
     			filters={'customer': customer, 'status': 'Partly Paid'},
     			fieldname='status',
    			 order_by='due_date ASC')
-			if not Unpaid:
+			paid = None
+			if not overdue and not Unpaid and not partpaid:
 				paid =	frappe.db.get_value(
     			'Sales Invoice',
     			filters={'customer': customer, 'status': 'Paid'},
