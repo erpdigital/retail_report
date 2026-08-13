@@ -1,0 +1,26 @@
+[
+ {
+  "custom_disabled": 0,
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Item Group",
+  "filter_attributes": [],
+  "filter_fields": [],
+  "image": null,
+  "include_descendants": 0,
+  "is_group": 0,
+  "item_group_defaults": [],
+  "item_group_name": "NEW_ITEMS",
+  "modified": "2026-08-13 06:44:55.591109",
+  "name": "NEW_ITEMS",
+  "old_parent": "\u0412\u0441\u0435 \u0433\u0440\u0443\u043f\u043f\u044b \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u043e\u0432",
+  "parent_item_group": "\u0412\u0441\u0435 \u0433\u0440\u0443\u043f\u043f\u044b \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u043e\u0432",
+  "route": "new-items",
+  "show_in_website": 0,
+  "slideshow": null,
+  "taxes": [],
+  "website_specifications": [],
+  "website_title": null,
+  "weightage": 0
+ }
+]

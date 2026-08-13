@@ -13,6 +13,9 @@ app_license = "MIT"
 fixtures = [
 	{"dt": "Role", "filters": [["role_name", "in", ["Purchase Requester"]]]},
 	{"dt": "Custom Field", "filters": [["dt", "in", ["Purchase Order", "Purchase Order Item", "Supplier"]]]},
+	{"dt": "DocType", "filters": [["name", "in", ["Purchase Receipt Scanner", "Purchase Receipt Scanner Item"]]]},
+	{"dt": "Client Script", "filters": [["name", "in", ["Purchase Receipt Scanner Tool", "PI Block NEW Items"]]]},
+	{"dt": "Item Group", "filters": [["name", "in", ["NEW_ITEMS"]]]},
 ]
 
 # Includes in <head>
