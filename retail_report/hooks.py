@@ -127,7 +127,13 @@ doc_events = {
 	"Purchase Order": {
 		"on_submit": "retail_report.retail_report.doctype.purchase_order_request.purchase_order_request.update_request_on_po_submit",
 		"on_cancel": "retail_report.retail_report.doctype.purchase_order_request.purchase_order_request.update_request_on_po_cancel",
-	}
+	},
+	# Items invented at the scanning bench are allowed onto a DRAFT invoice - that
+	# is the handover to back office. They are blocked at submit, which is the
+	# moment stock and valuation actually post.
+	"Purchase Invoice": {
+		"before_submit": "retail_report.api.placeholder_guard.check_purchase_invoice",
+	},
 }
 
 # Scheduled Tasks

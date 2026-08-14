@@ -1,0 +1,28 @@
+{
+ "content": null,
+ "creation": "2026-08-13 09:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-08-13 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Retail Report",
+ "name": "purchase_scan",
+ "owner": "Administrator",
+ "page_name": "purchase_scan",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Stock User"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "title": "Purchase Scan"
+}

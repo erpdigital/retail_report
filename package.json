@@ -1,0 +1,9 @@
+{
+  "name": "retail_report",
+  "private": true,
+  "dependencies": {
+    "@mdi/font": "^5.9.55",
+    "html5-qrcode": "^2.3.8",
+    "vuetify": "^2.6.10"
+  }
+}
