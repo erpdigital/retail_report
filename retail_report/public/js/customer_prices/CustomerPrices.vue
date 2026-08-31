@@ -71,8 +71,8 @@
 						</tr>
 						<tr>
 							<template v-for="u in activeUoms">
-								<th :key="u.uom + '-c'" class="cp-col-num cp-sub">{{ __('Current') }}</th>
-								<th :key="u.uom + '-n'" class="cp-col-num cp-sub">{{ __('New') }}</th>
+								<th :key="u.uom + '-c'" class="cp-col-num cp-sub">{{ __('Current rate') }}</th>
+								<th :key="u.uom + '-n'" class="cp-col-num cp-sub">{{ __('New rate') }}</th>
 								<th v-if="showBonus" :key="u.uom + '-b'" class="cp-col-num cp-sub">
 									{{ __('Bonus') }}
 								</th>

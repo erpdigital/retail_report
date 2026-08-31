@@ -24,7 +24,7 @@ frappe.ui.form.on('Purchase Invoice', {
 		feature_enabled().then((enabled) => {
 			if (!enabled) return;
 
-			frm.add_custom_button(__('Цены клиентов'), () => {
+			frm.add_custom_button(__('Customer Prices'), () => {
 				// The bundle is pulled in on click rather than through `app_include_js`,
 				// so it costs nothing on the invoices that never open it.
 				frappe.require('retail_report_customer_prices.bundle.js', () => {
