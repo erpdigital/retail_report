@@ -26,87 +26,108 @@
 				</div>
 				<label class="cp-check">
 					<input type="checkbox" v-model="onlyWithPrice" />
-					{{ __('Only customers who already have a price') }}
+					{{ __('Only customers with a price') }}
+				</label>
+				<label class="cp-check">
+					<input type="checkbox" v-model="showBonus" />
+					{{ __('Bonus') }}
 				</label>
 				<div class="cp-spacer"></div>
-				<span v-if="dirtyCount" class="cp-dirty">{{ __('{0} unsaved', [dirtyCount]) }}</span>
+				<span v-if="dirtyCells.length" class="cp-dirty">
+					{{ __('{0} unsaved', [dirtyCells.length]) }}
+				</span>
 			</div>
 
-			<div v-for="uom in activeUoms" :key="uom" class="cp-uom">
-				<div class="cp-uom-head">
-					<strong>{{ uom }}</strong>
-					<span class="cp-general">
-						{{ __('General price') }}:
-						<b>{{ generalRate(uom) === null ? '—' : fmt(generalRate(uom)) }}</b>
-					</span>
-					<span class="cp-tools">
-						<button class="btn btn-xs btn-default" @click="fillFromGeneral(uom)">
-							{{ __('Fill from general') }}
-						</button>
-						<button class="btn btn-xs btn-default" @click="applyPercent(uom, -1)">
-							{{ __('− %') }}
-						</button>
-						<button class="btn btn-xs btn-default" @click="applyPercent(uom, 1)">
-							{{ __('+ %') }}
-						</button>
-						<button class="btn btn-xs btn-default" @click="resetUom(uom)">
-							{{ __('Reset') }}
-						</button>
-					</span>
-				</div>
-
+			<div class="cp-scroll">
 				<table class="cp-table">
 					<thead>
 						<tr>
-							<th class="cp-col-cust">{{ __('Customer') }}</th>
-							<th class="cp-col-num">{{ __('Current') }}</th>
-							<th class="cp-col-num">{{ __('New Rate') }}</th>
-							<th class="cp-col-num">{{ __('Bonus') }}</th>
-							<th class="cp-col-src">{{ __('Last set by') }}</th>
+							<th class="cp-col-cust" rowspan="2">{{ __('Customer') }}</th>
+							<th
+								v-for="u in activeUoms"
+								:key="u.uom"
+								:colspan="showBonus ? 3 : 2"
+								class="cp-uomhead"
+							>
+								<b>{{ u.uom }}</b>
+								<span v-if="u.conversion_factor !== 1" class="cp-muted">
+									× {{ u.conversion_factor }}
+								</span>
+								<button
+									class="cp-mini"
+									:title="__('Fill from the general price')"
+									@click="fillFromGeneral(u.uom)"
+								>=</button>
+								<button
+									class="cp-mini"
+									:title="__('Apply a percentage')"
+									@click="applyPercent(u.uom)"
+								>%</button>
+							</th>
+						</tr>
+						<tr>
+							<template v-for="u in activeUoms">
+								<th :key="u.uom + '-c'" class="cp-col-num cp-sub">{{ __('Current') }}</th>
+								<th :key="u.uom + '-n'" class="cp-col-num cp-sub">{{ __('New') }}</th>
+								<th v-if="showBonus" :key="u.uom + '-b'" class="cp-col-num cp-sub">
+									{{ __('Bonus') }}
+								</th>
+							</template>
 						</tr>
 					</thead>
 					<tbody>
-						<tr
-							v-for="row in visibleRows(uom)"
-							:key="row.key"
-							:class="{ 'cp-changed': isDirty(row) }"
-						>
-							<td class="cp-col-cust" :title="row.customer">{{ row.customer_name }}</td>
-							<td class="cp-col-num cp-muted">
-								{{ row.current === null ? '—' : fmt(row.current) }}
-							</td>
-							<td class="cp-col-num">
-								<input
-									type="number"
-									step="0.01"
-									min="0"
-									class="cp-input"
-									v-model="row.rate"
-									:placeholder="generalRate(uom) === null ? '' : String(generalRate(uom))"
-								/>
-							</td>
-							<td class="cp-col-num">
-								<input type="number" step="0.01" min="0" class="cp-input" v-model="row.bonus" />
-							</td>
-							<td class="cp-col-src">
-								<span v-if="row.changed_by_this_invoice" class="cp-badge cp-badge-this">
-									{{ __('This invoice') }}
-								</span>
-								<span
-									v-else-if="row.source_purchase_invoice"
-									class="cp-badge cp-badge-other"
-									:title="row.source_updated_on"
-								>
-									{{ row.source_purchase_invoice }}
-								</span>
-								<span v-else class="cp-muted">—</span>
-							</td>
+						<tr class="cp-general-row">
+							<td class="cp-col-cust">{{ __('General price') }}</td>
+							<template v-for="u in activeUoms">
+								<td :key="u.uom + '-gc'" class="cp-col-num">{{ fmt(generalRate(u.uom)) }}</td>
+								<td :key="u.uom + '-gn'" class="cp-col-num cp-muted">—</td>
+								<td v-if="showBonus" :key="u.uom + '-gb'" class="cp-col-num cp-muted">—</td>
+							</template>
 						</tr>
-						<tr v-if="!visibleRows(uom).length">
-							<td colspan="5" class="cp-empty-row">{{ __('No customers to show.') }}</td>
+
+						<tr v-for="c in visibleCustomers" :key="c.name">
+							<td class="cp-col-cust" :title="c.name">{{ c.customer_name || c.name }}</td>
+							<template v-for="u in activeUoms">
+								<td :key="u.uom + '-c-' + c.name" class="cp-col-num cp-muted">
+									{{ cell(u.uom, c.name).original_rate === ''
+										? '—'
+										: fmt(cell(u.uom, c.name).original_rate) }}
+								</td>
+								<td :key="u.uom + '-n-' + c.name" class="cp-col-num">
+									<input
+										type="number"
+										step="0.01"
+										min="0"
+										class="cp-input"
+										:class="cellClass(u.uom, c.name)"
+										:title="cellTitle(u.uom, c.name)"
+										v-model="cell(u.uom, c.name).rate"
+									/>
+								</td>
+								<td v-if="showBonus" :key="u.uom + '-b-' + c.name" class="cp-col-num">
+									<input
+										type="number"
+										step="0.01"
+										min="0"
+										class="cp-input"
+										v-model="cell(u.uom, c.name).bonus"
+									/>
+								</td>
+							</template>
+						</tr>
+						<tr v-if="!visibleCustomers.length">
+							<td :colspan="activeUoms.length * (showBonus ? 3 : 2) + 1" class="cp-empty">
+								{{ __('No customers to show.') }}
+							</td>
 						</tr>
 					</tbody>
 				</table>
+			</div>
+
+			<div class="cp-legend">
+				<span class="cp-swatch cp-sw-this"></span> {{ __('set by this invoice') }}
+				<span class="cp-swatch cp-sw-other"></span> {{ __('set by another invoice') }}
+				<span class="cp-swatch cp-sw-dirty"></span> {{ __('edited, not saved') }}
 			</div>
 		</template>
 	</div>
@@ -115,26 +136,17 @@
 <script>
 import { api } from './api';
 
-/**
- * One row per (item, uom, customer). `current` is what is stored today and never
- * changes as the operator types - it is what makes "did I already move this?" legible
- * next to the editable value.
- */
-function buildRow(item_code, uom, customer, existing) {
+const cellKey = (item, uom, customer) => `${item}::${uom}::${customer}`;
+
+function blankCell() {
 	return {
-		key: `${item_code}::${uom}::${customer.name}`,
-		item_code,
-		uom,
-		customer: customer.name,
-		customer_name: customer.customer_name || customer.name,
-		current: existing ? existing.rate : null,
-		rate: existing ? String(existing.rate) : '',
-		bonus: existing ? String(existing.bonus) : '',
-		original_rate: existing ? String(existing.rate) : '',
-		original_bonus: existing ? String(existing.bonus) : '',
-		source_purchase_invoice: existing ? existing.source_purchase_invoice : null,
-		source_updated_on: existing ? existing.source_updated_on : null,
-		changed_by_this_invoice: existing ? existing.changed_by_this_invoice : false,
+		rate: '',
+		bonus: '',
+		original_rate: '',
+		original_bonus: '',
+		source_purchase_invoice: null,
+		source_updated_on: null,
+		changed_by_this_invoice: false,
 	};
 }
 
@@ -151,22 +163,34 @@ export default {
 			currency: null,
 			customers: [],
 			items: [],
-			rows: [],
+			cells: {},
 			generals: {},
 			activeItem: null,
 			onlyWithPrice: false,
+			showBonus: false,
 		};
 	},
 	computed: {
+		activeItemDoc() {
+			return this.items.find((i) => i.item_code === this.activeItem) || null;
+		},
 		activeUoms() {
-			const item = this.items.find((i) => i.item_code === this.activeItem);
-			return item ? item.uoms : [];
+			return this.activeItemDoc ? this.activeItemDoc.uoms : [];
 		},
-		dirtyRows() {
-			return this.rows.filter((r) => this.isDirty(r));
+		/** Edits survive switching items, so dirt is tracked across the whole grid. */
+		dirtyCells() {
+			return Object.keys(this.cells)
+				.map((k) => ({ key: k, cell: this.cells[k] }))
+				.filter(({ cell }) => this.isDirty(cell));
 		},
-		dirtyCount() {
-			return this.dirtyRows.length;
+		visibleCustomers() {
+			if (!this.onlyWithPrice) return this.customers;
+			return this.customers.filter((c) =>
+				this.activeUoms.some((u) => {
+					const cell = this.cells[cellKey(this.activeItem, u.uom, c.name)];
+					return cell && cell.original_rate !== '';
+				})
+			);
 		},
 	},
 	created() {
@@ -191,28 +215,36 @@ export default {
 			}
 		},
 
-		/** Expand the sparse stored prices into a full item x uom x customer grid. */
+		/** Index the sparse stored prices; cells are created lazily as the grid asks. */
 		buildGrid(stored) {
-			const byKey = {};
+			const cells = {};
 			const generals = {};
 			stored.forEach((r) => {
 				if (r.customer) {
-					byKey[`${r.item_code}::${r.uom}::${r.customer}`] = r;
+					cells[cellKey(r.item_code, r.uom, r.customer)] = {
+						rate: String(r.rate),
+						bonus: String(r.bonus),
+						original_rate: String(r.rate),
+						original_bonus: String(r.bonus),
+						source_purchase_invoice: r.source_purchase_invoice,
+						source_updated_on: r.source_updated_on,
+						changed_by_this_invoice: r.changed_by_this_invoice,
+					};
 				} else {
 					generals[`${r.item_code}::${r.uom}`] = r.rate;
 				}
 			});
+			this.cells = cells;
 			this.generals = generals;
+		},
 
-			const rows = [];
-			this.items.forEach((item) => {
-				item.uoms.forEach((uom) => {
-					this.customers.forEach((c) => {
-						rows.push(buildRow(item.item_code, uom, c, byKey[`${item.item_code}::${uom}::${c.name}`]));
-					});
-				});
-			});
-			this.rows = rows;
+		cell(uom, customer) {
+			const key = cellKey(this.activeItem, uom, customer);
+			if (!this.cells[key]) {
+				// Vue 2 cannot see plain property adds, so new cells go in reactively.
+				this.$set(this.cells, key, blankCell());
+			}
+			return this.cells[key];
 		},
 
 		generalRate(uom) {
@@ -220,68 +252,85 @@ export default {
 			return rate === undefined ? null : rate;
 		},
 
-		rowsFor(uom) {
-			return this.rows.filter((r) => r.item_code === this.activeItem && r.uom === uom);
+		isDirty(cell) {
+			if (cell.rate === '' || cell.rate === null) return false;
+			return cell.rate !== cell.original_rate || cell.bonus !== cell.original_bonus;
 		},
 
-		visibleRows(uom) {
-			const rows = this.rowsFor(uom);
-			return this.onlyWithPrice ? rows.filter((r) => r.current !== null) : rows;
+		cellClass(uom, customer) {
+			const cell = this.cell(uom, customer);
+			if (this.isDirty(cell)) return 'cp-is-dirty';
+			if (cell.changed_by_this_invoice) return 'cp-is-this';
+			if (cell.source_purchase_invoice) return 'cp-is-other';
+			return '';
 		},
 
-		isDirty(row) {
-			if (row.rate === '' || row.rate === null) return false;
-			return row.rate !== row.original_rate || row.bonus !== row.original_bonus;
+		cellTitle(uom, customer) {
+			const cell = this.cell(uom, customer);
+			const parts = [];
+			if (cell.source_purchase_invoice) {
+				parts.push(
+					cell.changed_by_this_invoice
+						? __('Set by this invoice on {0}', [cell.source_updated_on])
+						: __('Set by {0} on {1}', [cell.source_purchase_invoice, cell.source_updated_on])
+				);
+			} else if (cell.original_rate !== '') {
+				parts.push(__('Never set from a Purchase Invoice'));
+			}
+			return parts.join('\n');
 		},
 
 		fmt(value) {
-			return format_currency(value, this.currency);
+			return value === null || value === undefined || value === '' ? '—' : flt(value, 2);
+		},
+
+		eachVisibleCell(uom, fn) {
+			this.visibleCustomers.forEach((c) => fn(this.cell(uom, c.name)));
 		},
 
 		fillFromGeneral(uom) {
 			const rate = this.generalRate(uom);
 			if (rate === null) {
-				frappe.show_alert({ message: __('No general price for this UOM.'), indicator: 'orange' });
+				frappe.show_alert({
+					message: __('No general price on {0} for {1}.', [this.priceList, uom]),
+					indicator: 'orange',
+				});
 				return;
 			}
-			this.visibleRows(uom).forEach((r) => {
-				r.rate = String(rate);
+			this.eachVisibleCell(uom, (cell) => {
+				cell.rate = String(rate);
 			});
 		},
 
-		applyPercent(uom, sign) {
-			const raw = prompt(
-				sign < 0 ? __('Discount % off the current rate:') : __('Markup % on the current rate:')
-			);
+		applyPercent(uom) {
+			const raw = prompt(__('Percent to apply to {0} (negative for a discount):', [uom]));
 			const pct = parseFloat(raw);
 			if (isNaN(pct)) return;
 
-			const factor = (100 + sign * pct) / 100;
-			this.visibleRows(uom).forEach((r) => {
-				// Percent works off whatever the row shows now, falling back to the general
-				// price, so it is usable on customers who have no special price yet.
-				const base = parseFloat(r.rate) || this.generalRate(uom);
-				if (base) r.rate = (base * factor).toFixed(2);
+			const factor = (100 + pct) / 100;
+			this.eachVisibleCell(uom, (cell) => {
+				// Works off whatever the cell shows, falling back to the general price, so
+				// it is usable on customers who have no special price yet.
+				const base = parseFloat(cell.rate) || this.generalRate(uom);
+				if (base) cell.rate = (base * factor).toFixed(2);
 			});
 		},
 
-		resetUom(uom) {
-			this.rowsFor(uom).forEach((r) => {
-				r.rate = r.original_rate;
-				r.bonus = r.original_bonus;
-			});
-		},
-
-		/** Only edited rows are sent - untouched customers must not be given a price. */
+		/** Only edited cells are sent - untouched customers must not be given a price. */
 		collectChanges() {
-			return this.dirtyRows.map((r) => ({
-				item_code: r.item_code,
-				uom: r.uom,
-				customer: r.customer,
-				price_list: this.priceList,
-				rate: parseFloat(r.rate),
-				bonus: parseFloat(r.bonus) || 0,
-			}));
+			return this.dirtyCells.map(({ key, cell }) => {
+				const [item_code, uom, customer] = key.split('::');
+				return {
+					item_code,
+					uom,
+					customer,
+					price_list: this.priceList,
+					rate: parseFloat(cell.rate),
+					// Carried through untouched when the bonus column is hidden, so a save
+					// never silently writes the field's default of 1.
+					bonus: parseFloat(cell.bonus) || 0,
+				};
+			});
 		},
 
 		async save() {
@@ -305,11 +354,8 @@ export default {
 <style scoped>
 .cp-root {
 	font-size: 12px;
-	max-height: 62vh;
-	overflow: auto;
 }
-.cp-empty,
-.cp-empty-row {
+.cp-empty {
 	padding: 16px;
 	color: var(--text-muted, #8d99a6);
 	text-align: center;
@@ -321,10 +367,6 @@ export default {
 	flex-wrap: wrap;
 	padding-bottom: 10px;
 	border-bottom: 1px solid var(--border-color, #e2e6e9);
-	position: sticky;
-	top: 0;
-	background: var(--card-bg, #fff);
-	z-index: 2;
 }
 .cp-field {
 	display: flex;
@@ -337,7 +379,7 @@ export default {
 	margin: 0;
 }
 .cp-field select {
-	min-width: 190px;
+	min-width: 220px;
 	height: 26px;
 	border: 1px solid var(--border-color, #d1d8dd);
 	border-radius: 4px;
@@ -346,7 +388,7 @@ export default {
 }
 .cp-check {
 	font-weight: normal;
-	margin: 0 0 3px 0;
+	margin: 0 0 4px 0;
 	display: flex;
 	align-items: center;
 	gap: 5px;
@@ -357,86 +399,133 @@ export default {
 .cp-dirty {
 	color: #b45309;
 	font-weight: 600;
-	padding-bottom: 3px;
+	padding-bottom: 4px;
 }
-.cp-uom {
-	margin-top: 14px;
-}
-.cp-uom-head {
-	display: flex;
-	align-items: center;
-	gap: 14px;
-	flex-wrap: wrap;
-	margin-bottom: 5px;
-}
-.cp-general {
-	color: var(--text-muted, #8d99a6);
-}
-.cp-tools {
-	margin-left: auto;
-	display: flex;
-	gap: 4px;
+
+/* Wide items scroll inside the grid so the customer column and the header stay put. */
+.cp-scroll {
+	overflow: auto;
+	max-height: 58vh;
+	margin-top: 8px;
 }
 .cp-table {
-	width: 100%;
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
+	white-space: nowrap;
 }
 .cp-table th,
 .cp-table td {
-	padding: 3px 6px;
+	padding: 2px 6px;
 	border-bottom: 1px solid var(--border-color, #f0f2f4);
 	text-align: left;
 }
-.cp-table th {
+.cp-table thead th {
+	position: sticky;
+	background: var(--card-bg, #fff);
+	z-index: 2;
 	font-size: 11px;
 	color: var(--text-muted, #8d99a6);
 	font-weight: 600;
 }
-.cp-col-num {
-	width: 96px;
-	text-align: right;
+.cp-table thead tr:first-child th {
+	top: 0;
 }
-.cp-col-src {
-	width: 150px;
+.cp-table thead tr:nth-child(2) th {
+	top: 22px;
+}
+.cp-uomhead {
+	text-align: center;
+	border-left: 1px solid var(--border-color, #e2e6e9);
+	color: var(--text-color, #36414c);
+}
+.cp-sub {
+	text-align: right;
+	font-weight: normal;
+}
+.cp-mini {
+	border: 1px solid var(--border-color, #d1d8dd);
+	background: var(--control-bg, #fff);
+	border-radius: 3px;
+	font-size: 10px;
+	line-height: 1;
+	padding: 1px 4px;
+	margin-left: 2px;
+	cursor: pointer;
 }
 .cp-col-cust {
-	max-width: 240px;
+	position: sticky;
+	left: 0;
+	background: var(--card-bg, #fff);
+	z-index: 1;
+	max-width: 230px;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	white-space: nowrap;
+	border-right: 1px solid var(--border-color, #e2e6e9);
+}
+.cp-table thead .cp-col-cust {
+	z-index: 3;
+}
+.cp-col-num {
+	width: 92px;
+	text-align: right;
+}
+.cp-general-row td {
+	background: var(--bg-light-gray, #f7f9fa);
+	font-weight: 600;
+}
+.cp-general-row .cp-col-cust {
+	background: var(--bg-light-gray, #f7f9fa);
 }
 .cp-muted {
 	color: var(--text-muted, #8d99a6);
 }
 .cp-input {
 	width: 100%;
-	height: 24px;
+	height: 22px;
 	text-align: right;
 	border: 1px solid var(--border-color, #d1d8dd);
-	border-radius: 4px;
+	border-radius: 3px;
 	background: var(--control-bg, #fff);
-	padding: 0 5px;
+	padding: 0 4px;
+	font-size: 11px;
 }
-.cp-changed .cp-input {
+.cp-is-dirty {
 	border-color: #f59e0b;
 	background: #fffbeb;
 }
-.cp-badge {
+.cp-is-this {
+	border-color: #10b981;
+	background: #ecfdf5;
+}
+.cp-is-other {
+	border-color: #cbd5e1;
+	background: #f8fafc;
+}
+.cp-legend {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 8px;
+	color: var(--text-muted, #8d99a6);
+	font-size: 11px;
+}
+.cp-swatch {
 	display: inline-block;
-	padding: 1px 6px;
-	border-radius: 8px;
-	font-size: 10px;
-	max-width: 100%;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	width: 10px;
+	height: 10px;
+	border-radius: 2px;
+	margin-left: 10px;
 }
-.cp-badge-this {
-	background: #d1fae5;
-	color: #065f46;
+.cp-sw-this {
+	background: #ecfdf5;
+	border: 1px solid #10b981;
 }
-.cp-badge-other {
-	background: #eef1f4;
-	color: #55606b;
+.cp-sw-other {
+	background: #f8fafc;
+	border: 1px solid #cbd5e1;
+}
+.cp-sw-dirty {
+	background: #fffbeb;
+	border: 1px solid #f59e0b;
 }
 </style>

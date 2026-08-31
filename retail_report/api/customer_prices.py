@@ -124,18 +124,36 @@ def _invoice_items(purchase_invoice):
 		item["qty"] += flt(row.qty)
 
 	for code, item in items.items():
-		uoms = {item["stock_uom"], item["purchase_uom"]}
-		uoms.update(
-			d.uom
-			for d in frappe.get_all(
-				"UOM Conversion Detail",
-				filters={"parent": code, "parenttype": "Item"},
-				fields=["uom"],
-			)
-		)
-		item["uoms"] = sorted(u for u in uoms if u)
+		item["uoms"] = _ordered_uoms(code, item["stock_uom"], item["purchase_uom"])
 
 	return list(items.values())
+
+
+def _ordered_uoms(item_code, stock_uom, purchase_uom):
+	"""The item's UOMs, smallest first, each with its conversion factor.
+
+	Ordered by factor rather than by name so the single (шт, factor 1) always leads and
+	the block (Koropka x20, Blok x15) follows - alphabetical put the Latin block names
+	ahead of the Cyrillic single. Every UOM the item converts is returned, so an item
+	with three of them gets three columns instead of being squeezed into the legacy
+	two hardcoded name lists.
+	"""
+	factors = {}
+	for row in frappe.get_all(
+		"UOM Conversion Detail",
+		filters={"parent": item_code, "parenttype": "Item"},
+		fields=["uom", "conversion_factor"],
+	):
+		factors[row.uom] = flt(row.conversion_factor) or 1.0
+
+	for uom in (stock_uom, purchase_uom):
+		if uom:
+			factors.setdefault(uom, 1.0)
+
+	return [
+		{"uom": uom, "conversion_factor": factor}
+		for uom, factor in sorted(factors.items(), key=lambda kv: (kv[1], kv[0]))
+	]
 
 
 def _price_rows(item_codes, price_list, purchase_invoice):
