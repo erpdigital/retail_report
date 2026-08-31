@@ -32,6 +32,10 @@
 					<input type="checkbox" v-model="showBonus" />
 					{{ __('Bonus') }}
 				</label>
+				<label class="cp-check" :title="__('Enter in a price fills the other UOMs from the conversion factor')">
+					<input type="checkbox" v-model="autoConvert" />
+					{{ __('Auto-convert on Enter') }}
+				</label>
 				<div class="cp-spacer"></div>
 				<span v-if="dirtyCells.length" class="cp-dirty">
 					{{ __('{0} unsaved', [dirtyCells.length]) }}
@@ -99,7 +103,7 @@
 										:class="cellClass(u.uom, c.name)"
 										:title="cellTitle(u.uom, c.name)"
 										v-model="cell(u.uom, c.name).rate"
-										@keydown.enter.prevent="commit"
+										@keydown.enter.prevent="commitRate($event, u.uom, c.name)"
 										@blur="normalize(cell(u.uom, c.name), 'rate')"
 									/>
 								</td>
@@ -109,7 +113,7 @@
 										inputmode="decimal"
 										class="cp-input"
 										v-model="cell(u.uom, c.name).bonus"
-										@keydown.enter.prevent="commit"
+										@keydown.enter.prevent="commitBonus"
 										@blur="normalize(cell(u.uom, c.name), 'bonus')"
 									/>
 								</td>
@@ -185,6 +189,7 @@ export default {
 			activeItem: null,
 			onlyWithPrice: false,
 			showBonus: false,
+			autoConvert: true,
 		};
 	},
 	computed: {
@@ -294,9 +299,37 @@ export default {
 			return rate === undefined ? null : rate;
 		},
 
-		/** Enter commits the cell rather than leaking up to the dialog. */
-		commit(event) {
+		/**
+		 * Enter commits the cell and fills the item's other UOMs from the conversion
+		 * factor - type the шт price, get the Koropka price, or the other way round.
+		 *
+		 * Deliberately bound to Enter rather than to blur: tabbing through the grid
+		 * should not quietly rewrite a block price somebody set off-ratio on purpose.
+		 */
+		commitRate(event, uom, customer) {
+			// Blur first so `normalize` has already parsed what was typed.
 			event.target.blur();
+			this.convertFrom(uom, customer);
+		},
+
+		commitBonus(event) {
+			event.target.blur();
+		},
+
+		/** Price per stock unit is rate / factor, so every other UOM is that x its factor. */
+		convertFrom(uom, customer) {
+			if (!this.autoConvert || this.activeUoms.length < 2) return;
+
+			const source = this.activeUoms.find((u) => u.uom === uom);
+			const rate = parseNum(this.cell(uom, customer).rate);
+			if (!source || !source.conversion_factor || rate === null) return;
+
+			const perStockUnit = rate / source.conversion_factor;
+			this.activeUoms.forEach((u) => {
+				if (u.uom === uom || !u.conversion_factor) return;
+				const target = this.cell(u.uom, customer);
+				target.rate = String(Math.round(perStockUnit * u.conversion_factor * 100) / 100);
+			});
 		},
 
 		normalize(cell, field) {
