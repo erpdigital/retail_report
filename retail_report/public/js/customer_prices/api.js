@@ -15,7 +15,7 @@ export function call(method, args = {}, { freeze = false, freeze_message = '' } 
 }
 
 export const api = {
-	getContext: (purchase_invoice) => call('get_context', { purchase_invoice }),
+	getContext: (purchase_invoice, price_list) => call('get_context', { purchase_invoice, price_list }),
 	savePrices: (purchase_invoice, changes) =>
 		call(
 			'save_prices',

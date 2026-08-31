@@ -48,12 +48,8 @@ def feature_enabled():
 
 
 @frappe.whitelist()
-def get_context(purchase_invoice=None):
-	"""Everything the dialog renders, in one round trip.
-
-	Every enabled selling price list comes back at once - the grid puts them all on one
-	line per customer, so there is no list selector to drive a second fetch.
-	"""
+def get_context(purchase_invoice=None, price_list=None):
+	"""Everything the dialog renders, in one round trip."""
 	if not is_enabled():
 		frappe.throw(_("Special customers are not configured on this site."))
 
@@ -66,31 +62,29 @@ def get_context(purchase_invoice=None):
 		order_by="customer_name",
 	)
 
-	# Disabled lists are excluded deliberately: the legacy grid wrote seven price lists
-	# by name, two of which (Bedew market, Optom 2) have since been turned off.
-	price_lists = frappe.get_all(
-		"Price List",
-		filters={"enabled": 1, "selling": 1},
-		fields=["name", "currency"],
-		order_by="name",
-	)
-	names = [p.name for p in price_lists]
-	if PREFERRED_PRICE_LIST in names:
-		lead = price_lists.pop(names.index(PREFERRED_PRICE_LIST))
-		price_lists.insert(0, lead)
+	price_lists = [
+		p.name
+		for p in frappe.get_all(
+			"Price List", filters={"enabled": 1, "selling": 1}, fields=["name"], order_by="name"
+		)
+	]
+	if PREFERRED_PRICE_LIST in price_lists:
+		price_lists.remove(PREFERRED_PRICE_LIST)
+		price_lists.insert(0, PREFERRED_PRICE_LIST)
 
+	price_list = price_list or (price_lists[0] if price_lists else None)
 	items = _invoice_items(purchase_invoice)
 
 	return {
 		"enabled": True,
 		"purchase_invoice": purchase_invoice,
+		"price_list": price_list,
 		"price_lists": price_lists,
 		"customers": customers,
 		"items": items,
-		"rows": _price_rows(
-			[i["item_code"] for i in items], [p.name for p in price_lists], purchase_invoice
-		),
+		"rows": _price_rows([i["item_code"] for i in items], price_list, purchase_invoice),
 		"has_provenance": _provenance_available(),
+		"currency": frappe.db.get_value("Price List", price_list, "currency") if price_list else None,
 	}
 
 
@@ -130,43 +124,27 @@ def _invoice_items(purchase_invoice):
 		item["qty"] += flt(row.qty)
 
 	for code, item in items.items():
-		item.update(_unit_and_block(code, item["stock_uom"]))
+		uoms = {item["stock_uom"], item["purchase_uom"]}
+		uoms.update(
+			d.uom
+			for d in frappe.get_all(
+				"UOM Conversion Detail",
+				filters={"parent": code, "parenttype": "Item"},
+				fields=["uom"],
+			)
+		)
+		item["uoms"] = sorted(u for u in uoms if u)
 
 	return list(items.values())
 
 
-def _unit_and_block(item_code, stock_uom):
-	"""Split an item's UOMs into the shtuk (single) and block columns of the grid.
-
-	Derived from the conversion factors rather than the legacy hardcoded UOM name
-	lists, which silently dropped any UOM nobody had remembered to add to them: factor
-	1 is the single, the largest factor above 1 is the block.
-	"""
-	conversions = frappe.get_all(
-		"UOM Conversion Detail",
-		filters={"parent": item_code, "parenttype": "Item"},
-		fields=["uom", "conversion_factor"],
-	)
-
-	unit_uom = stock_uom
-	block_uom, block_factor = None, 1.0
-	for row in conversions:
-		factor = flt(row.conversion_factor)
-		if factor == 1 and not unit_uom:
-			unit_uom = row.uom
-		elif factor > block_factor:
-			block_uom, block_factor = row.uom, factor
-
-	return {"unit_uom": unit_uom, "block_uom": block_uom, "block_factor": block_factor}
-
-
-def _price_rows(item_codes, price_lists, purchase_invoice):
+def _price_rows(item_codes, price_list, purchase_invoice):
 	"""Existing prices for these items - customer-specific ones plus the general row.
 
 	The general (customer-blank) rate rides along so the dialog can show what a special
 	price is a discount *from*, and so % markup tools have a base to work off.
 	"""
-	if not item_codes or not price_lists:
+	if not item_codes or not price_list:
 		return []
 
 	fields = [
@@ -188,10 +166,10 @@ def _price_rows(item_codes, price_lists, purchase_invoice):
 
 	records = frappe.get_all(
 		"Item Price",
-		filters={"item_code": ["in", item_codes], "price_list": ["in", price_lists]},
+		filters={"item_code": ["in", item_codes], "price_list": price_list},
 		fields=fields,
 		limit_page_length=0,
-		order_by="item_code, price_list, uom, customer",
+		order_by="item_code, uom, customer",
 	)
 
 	rows = []
