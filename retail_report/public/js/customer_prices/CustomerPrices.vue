@@ -89,28 +89,28 @@
 							<td class="cp-col-cust" :title="c.name">{{ c.customer_name || c.name }}</td>
 							<template v-for="u in activeUoms">
 								<td :key="u.uom + '-c-' + c.name" class="cp-col-num cp-muted">
-									{{ cell(u.uom, c.name).original_rate === ''
-										? '—'
-										: fmt(cell(u.uom, c.name).original_rate) }}
+									{{ fmt(cell(u.uom, c.name).original_rate) }}
 								</td>
 								<td :key="u.uom + '-n-' + c.name" class="cp-col-num">
 									<input
-										type="number"
-										step="0.01"
-										min="0"
+										type="text"
+										inputmode="decimal"
 										class="cp-input"
 										:class="cellClass(u.uom, c.name)"
 										:title="cellTitle(u.uom, c.name)"
 										v-model="cell(u.uom, c.name).rate"
+										@keydown.enter.prevent="commit"
+										@blur="normalize(cell(u.uom, c.name), 'rate')"
 									/>
 								</td>
 								<td v-if="showBonus" :key="u.uom + '-b-' + c.name" class="cp-col-num">
 									<input
-										type="number"
-										step="0.01"
-										min="0"
+										type="text"
+										inputmode="decimal"
 										class="cp-input"
 										v-model="cell(u.uom, c.name).bonus"
+										@keydown.enter.prevent="commit"
+										@blur="normalize(cell(u.uom, c.name), 'bonus')"
 									/>
 								</td>
 							</template>
@@ -137,6 +137,23 @@
 import { api } from './api';
 
 const cellKey = (item, uom, customer) => `${item}::${uom}::${customer}`;
+
+/**
+ * Parse what an operator actually typed.
+ *
+ * These sites run a Russian desk, so prices get typed with a decimal comma. An
+ * `<input type="number">` reports anything it cannot parse as an empty string, which
+ * silently threw the edit away and put the stored price back on the next render - and
+ * it drew stepper arrows inside every cell. This grid uses text inputs and parses here
+ * instead, accepting both separators.
+ */
+function parseNum(raw) {
+	if (raw === null || raw === undefined) return null;
+	const cleaned = String(raw).trim().replace(/\s/g, '').replace(',', '.');
+	if (cleaned === '') return null;
+	const value = Number(cleaned);
+	return Number.isFinite(value) ? value : null;
+}
 
 function blankCell() {
 	return {
@@ -193,6 +210,11 @@ export default {
 			);
 		},
 	},
+	watch: {
+		activeItem() {
+			this.ensureCells();
+		},
+	},
 	created() {
 		this.reload();
 	},
@@ -215,7 +237,7 @@ export default {
 			}
 		},
 
-		/** Index the sparse stored prices; cells are created lazily as the grid asks. */
+		/** Index the sparse stored prices into the grid's cell map. */
 		buildGrid(stored) {
 			const cells = {};
 			const generals = {};
@@ -236,15 +258,35 @@ export default {
 			});
 			this.cells = cells;
 			this.generals = generals;
+			this.ensureCells();
+		},
+
+		/**
+		 * Create the blank cells the active item needs, up front.
+		 *
+		 * They used to be created lazily by `cell()` while the template was rendering,
+		 * which mutates state mid-render and lets Vue re-patch an input out from under
+		 * whoever is typing in it.
+		 */
+		ensureCells() {
+			const item = this.activeItemDoc;
+			if (!item) return;
+
+			const added = {};
+			item.uoms.forEach((u) => {
+				this.customers.forEach((c) => {
+					const key = cellKey(item.item_code, u.uom, c.name);
+					if (!this.cells[key]) added[key] = blankCell();
+				});
+			});
+			if (Object.keys(added).length) {
+				this.cells = Object.assign({}, this.cells, added);
+			}
 		},
 
 		cell(uom, customer) {
-			const key = cellKey(this.activeItem, uom, customer);
-			if (!this.cells[key]) {
-				// Vue 2 cannot see plain property adds, so new cells go in reactively.
-				this.$set(this.cells, key, blankCell());
-			}
-			return this.cells[key];
+			// Pure lookup - `ensureCells` has already made every cell the grid can show.
+			return this.cells[cellKey(this.activeItem, uom, customer)] || blankCell();
 		},
 
 		generalRate(uom) {
@@ -252,9 +294,21 @@ export default {
 			return rate === undefined ? null : rate;
 		},
 
+		/** Enter commits the cell rather than leaking up to the dialog. */
+		commit(event) {
+			event.target.blur();
+		},
+
+		normalize(cell, field) {
+			const value = parseNum(cell[field]);
+			cell[field] = value === null ? '' : String(value);
+		},
+
 		isDirty(cell) {
-			if (cell.rate === '' || cell.rate === null) return false;
-			return cell.rate !== cell.original_rate || cell.bonus !== cell.original_bonus;
+			const rate = parseNum(cell.rate);
+			if (rate === null) return false;
+			const bonus = parseNum(cell.bonus) || 0;
+			return rate !== parseNum(cell.original_rate) || bonus !== (parseNum(cell.original_bonus) || 0);
 		},
 
 		cellClass(uom, customer) {
@@ -267,21 +321,17 @@ export default {
 
 		cellTitle(uom, customer) {
 			const cell = this.cell(uom, customer);
-			const parts = [];
 			if (cell.source_purchase_invoice) {
-				parts.push(
-					cell.changed_by_this_invoice
-						? __('Set by this invoice on {0}', [cell.source_updated_on])
-						: __('Set by {0} on {1}', [cell.source_purchase_invoice, cell.source_updated_on])
-				);
-			} else if (cell.original_rate !== '') {
-				parts.push(__('Never set from a Purchase Invoice'));
+				return cell.changed_by_this_invoice
+					? __('Set by this invoice on {0}', [cell.source_updated_on])
+					: __('Set by {0} on {1}', [cell.source_purchase_invoice, cell.source_updated_on]);
 			}
-			return parts.join('\n');
+			return cell.original_rate !== '' ? __('Never set from a Purchase Invoice') : '';
 		},
 
 		fmt(value) {
-			return value === null || value === undefined || value === '' ? '—' : flt(value, 2);
+			const number = parseNum(value);
+			return number === null ? '—' : flt(number, 2);
 		},
 
 		eachVisibleCell(uom, fn) {
@@ -303,15 +353,16 @@ export default {
 		},
 
 		applyPercent(uom) {
-			const raw = prompt(__('Percent to apply to {0} (negative for a discount):', [uom]));
-			const pct = parseFloat(raw);
-			if (isNaN(pct)) return;
+			const pct = parseNum(
+				prompt(__('Percent to apply to {0} (negative for a discount):', [uom]))
+			);
+			if (pct === null) return;
 
 			const factor = (100 + pct) / 100;
 			this.eachVisibleCell(uom, (cell) => {
 				// Works off whatever the cell shows, falling back to the general price, so
 				// it is usable on customers who have no special price yet.
-				const base = parseFloat(cell.rate) || this.generalRate(uom);
+				const base = parseNum(cell.rate) || this.generalRate(uom);
 				if (base) cell.rate = (base * factor).toFixed(2);
 			});
 		},
@@ -325,10 +376,10 @@ export default {
 					uom,
 					customer,
 					price_list: this.priceList,
-					rate: parseFloat(cell.rate),
+					rate: parseNum(cell.rate),
 					// Carried through untouched when the bonus column is hidden, so a save
 					// never silently writes the field's default of 1.
-					bonus: parseFloat(cell.bonus) || 0,
+					bonus: parseNum(cell.bonus) || 0,
 				};
 			});
 		},
@@ -488,6 +539,16 @@ export default {
 	background: var(--control-bg, #fff);
 	padding: 0 4px;
 	font-size: 11px;
+}
+/* No stepper arrows inside the cells - they crowd a dense grid and a stray scroll
+   over a focused one silently changes a price. */
+.cp-input::-webkit-outer-spin-button,
+.cp-input::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+.cp-input[type='number'] {
+	-moz-appearance: textfield;
 }
 .cp-is-dirty {
 	border-color: #f59e0b;
