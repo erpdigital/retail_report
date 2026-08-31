@@ -42,6 +42,10 @@ fixtures = [
 # include js in page
 page_js = {"page" : "public/js/hide.js"}
 
+# Guarded inside the script itself - it draws nothing on sites without
+# special customers, which is every site here except the 5dogan lineage.
+doctype_js = {"Purchase Invoice": "public/js/purchase_invoice_customer_prices.js"}
+
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
